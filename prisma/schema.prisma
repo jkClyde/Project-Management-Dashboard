@@ -57,10 +57,12 @@ model Task {
   projectId   String    @map("project_id") @db.Uuid
   title       String
   description String?
-  status      String?   @default("todo")
+
+  status      TaskStatus   @default(todo)     
+  priority    TaskPriority @default(medium)   
+
   assigneeId  String?   @map("assignee_id") @db.Uuid
   dueDate     DateTime? @map("due_date") @db.Date
-  priority    String?   @default("medium")
   position    Int?      @default(0)
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
