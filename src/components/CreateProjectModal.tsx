@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CreateProjectInput } from "./types/projects";
+import { CreateProjectInput } from "../../types/projects";
 
 const PRESET_COLORS = [
     "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",

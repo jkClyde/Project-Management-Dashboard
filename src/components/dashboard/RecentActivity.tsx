@@ -1,25 +1,25 @@
 import { CheckCircle2, FolderKanban, CircleDot, Users, PenLine } from "lucide-react";
 import Link from "next/link";
-import { ActivityItem, ActivityType } from "../../types/dashboard";
+import { ActivityItem, ActivityType } from "../../../types/dashboard";
 
 interface RecentActivityProps {
     items: ActivityItem[];
 }
 
 const ACTIVITY_ICONS: Record<ActivityType, React.ElementType> = {
-    task_done:       CheckCircle2,
+    task_done: CheckCircle2,
     project_created: FolderKanban,
-    task_created:    CircleDot,
-    member_joined:   Users,
-    task_updated:    PenLine,
+    task_created: CircleDot,
+    member_joined: Users,
+    task_updated: PenLine,
 };
 
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
-    task_done:       "text-emerald-500 bg-emerald-500/10",
+    task_done: "text-emerald-500 bg-emerald-500/10",
     project_created: "text-primary bg-primary/10",
-    task_created:    "text-sky-500 bg-sky-500/10",
-    member_joined:   "text-violet-500 bg-violet-500/10",
-    task_updated:    "text-orange-500 bg-orange-500/10",
+    task_created: "text-sky-500 bg-sky-500/10",
+    member_joined: "text-violet-500 bg-violet-500/10",
+    task_updated: "text-orange-500 bg-orange-500/10",
 };
 
 export default function RecentActivity({ items }: RecentActivityProps) {
@@ -69,8 +69,8 @@ export default function RecentActivity({ items }: RecentActivityProps) {
                                                 </div>
                                             </div>
                                             <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 mt-0.5">
-                        {item.time}
-                      </span>
+                                                {item.time}
+                                            </span>
                                         </div>
                                     </div>
                                 </Link>

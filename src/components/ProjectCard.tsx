@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { ProjectWithStats, ProjectStatus } from "./types/projects";
+import type { ProjectWithStats, ProjectStatus } from "../../types/projects";
 
 interface ProjectCardProps {
     project: ProjectWithStats;

@@ -1,4 +1,4 @@
-import { TaskStatus } from "../../types/dashboard";
+import { TaskStatus } from "../../../types/dashboard";
 
 interface TaskStatusBarProps {
     tasksByStatus: Record<TaskStatus, number>;
@@ -7,9 +7,9 @@ interface TaskStatusBarProps {
 }
 
 const SEGMENTS: { key: TaskStatus; label: string; color: string; bg: string }[] = [
-    { key: "done",        label: "Done",        color: "bg-emerald-500", bg: "bg-emerald-500/10" },
-    { key: "in_progress", label: "In Progress", color: "bg-primary",     bg: "bg-primary/10" },
-    { key: "todo",        label: "To Do",       color: "bg-border",      bg: "bg-muted" },
+    { key: "done", label: "Done", color: "bg-emerald-500", bg: "bg-emerald-500/10" },
+    { key: "in_progress", label: "In Progress", color: "bg-primary", bg: "bg-primary/10" },
+    { key: "todo", label: "To Do", color: "bg-border", bg: "bg-muted" },
 ];
 
 export default function TaskStatusBar({ tasksByStatus, total, completionRate }: TaskStatusBarProps) {

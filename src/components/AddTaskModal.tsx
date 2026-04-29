@@ -13,7 +13,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import type { TaskDetail, ProjectDetail } from "@/hooks/useProjectDetail";
-import { TaskStatus, TaskPriority } from "@/generated/prisma/enums";
+import { TaskStatus, TaskPriority } from "@prisma/client";
 
 interface AddTaskModalProps {
     open: boolean;

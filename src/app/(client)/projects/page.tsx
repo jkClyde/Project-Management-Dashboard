@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useProjects } from "@/hooks/useProject";
 import ProjectCard from "@/components/ProjectCard";
 import CreateProjectModal from "@/components/CreateProjectModal";
-import { ProjectStatus } from "@/components/types/projects";
+import { ProjectStatus } from "../../../../types/projects";
 
 type FilterTab = "all" | ProjectStatus;
 
@@ -30,10 +30,10 @@ const SORT_OPTIONS = [
 ];
 
 function StatCard({
-                      label,
-                      value,
-                      accent,
-                  }: {
+    label,
+    value,
+    accent,
+}: {
     label: string;
     value: string | number;
     accent?: string;
@@ -201,7 +201,7 @@ export default function ProjectsPage() {
                             className={`p-1.5 transition-colors ${view === "grid"
                                 ? "bg-primary text-primary-foreground"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                            }`}
+                                }`}
                             aria-label="Grid view"
                         >
                             <LayoutGrid size={14} />
@@ -211,7 +211,7 @@ export default function ProjectsPage() {
                             className={`p-1.5 transition-colors ${view === "list"
                                 ? "bg-primary text-primary-foreground"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                            }`}
+                                }`}
                             aria-label="List view"
                         >
                             <List size={14} />

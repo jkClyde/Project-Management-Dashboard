@@ -1,15 +1,15 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { TopProject } from "../../types/dashboard";
+import { TopProject } from "../../../types/dashboard";
 
 interface TopProjectsProps {
     projects: TopProject[];
 }
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-    active:    { label: "Active",    cls: "bg-emerald-500/10 text-emerald-500" },
+    active: { label: "Active", cls: "bg-emerald-500/10 text-emerald-500" },
     completed: { label: "Completed", cls: "bg-primary/10 text-primary" },
-    archived:  { label: "Archived",  cls: "bg-muted text-muted-foreground" },
+    archived: { label: "Archived", cls: "bg-muted text-muted-foreground" },
 };
 
 export default function TopProjects({ projects }: TopProjectsProps) {
@@ -52,8 +52,8 @@ export default function TopProjects({ projects }: TopProjectsProps) {
                                             {p.name}
                                         </p>
                                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${statusMeta.cls}`}>
-                      {statusMeta.label}
-                    </span>
+                                            {statusMeta.label}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between mt-0.5">
                                         <p className="text-xs text-muted-foreground">
