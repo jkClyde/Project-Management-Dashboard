@@ -28,30 +28,30 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMyTasks } from "@/hooks/useMyTasks";        // ← hook you'll create
 import TaskDetailModal from "@/components/TaskDetailModal";
-import { TaskDetail, TaskStatus, TaskPriority } from "@/types/task";
+import { TaskDetail, TaskStatus, TaskPriority } from "../../../../types/task";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 type FilterTab = "all" | TaskStatus;
 
 const STATUS_META: Record<TaskStatus, { label: string; cls: string; icon: React.ElementType }> = {
-    todo:        { label: "To Do",       cls: "bg-slate-500/10 text-slate-400 border-slate-500/20",  icon: CircleDot },
-    in_progress: { label: "In Progress", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20",  icon: Clock },
-    done:        { label: "Done",        cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: CheckCircle2 },
+    todo: { label: "To Do", cls: "bg-slate-500/10 text-slate-400 border-slate-500/20", icon: CircleDot },
+    in_progress: { label: "In Progress", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Clock },
+    done: { label: "Done", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: CheckCircle2 },
 };
 
 const PRIORITY_META: Record<TaskPriority, { label: string; dot: string; textCls: string }> = {
-    low:    { label: "Low",    dot: "bg-sky-400",    textCls: "text-sky-400" },
+    low: { label: "Low", dot: "bg-sky-400", textCls: "text-sky-400" },
     medium: { label: "Medium", dot: "bg-yellow-400", textCls: "text-yellow-400" },
-    high:   { label: "High",   dot: "bg-orange-400", textCls: "text-orange-400" },
-    urgent: { label: "Urgent", dot: "bg-red-400",    textCls: "text-red-400" },
+    high: { label: "High", dot: "bg-orange-400", textCls: "text-orange-400" },
+    urgent: { label: "Urgent", dot: "bg-red-400", textCls: "text-red-400" },
 };
 
 const SORT_OPTIONS = [
-    { value: "due",      label: "Due date" },
+    { value: "due", label: "Due date" },
     { value: "priority", label: "Priority" },
-    { value: "updated",  label: "Last updated" },
-    { value: "project",  label: "Project" },
+    { value: "updated", label: "Last updated" },
+    { value: "project", label: "Project" },
 ];
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -91,11 +91,11 @@ export default function MyTasksPage() {
     const { tasks, loading, error, updateTask, deleteTask, addComment, deleteComment } = useMyTasks();
 
     // ── Derived stats ────────────────────────────────────────────────────────────
-    const totalTasks    = tasks.length;
-    const todoDasks     = tasks.filter((t) => t.status === "todo").length;
-    const inProgress    = tasks.filter((t) => t.status === "in_progress").length;
-    const done          = tasks.filter((t) => t.status === "done").length;
-    const overdue       = tasks.filter(
+    const totalTasks = tasks.length;
+    const todoDasks = tasks.filter((t) => t.status === "todo").length;
+    const inProgress = tasks.filter((t) => t.status === "in_progress").length;
+    const done = tasks.filter((t) => t.status === "done").length;
+    const overdue = tasks.filter(
         (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "done"
     ).length;
 
@@ -157,10 +157,10 @@ export default function MyTasksPage() {
             {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                    { label: "Total",       value: totalTasks, accent: "text-foreground",   icon: CheckSquare,    bg: "bg-muted" },
-                    { label: "In Progress", value: inProgress, accent: "text-amber-400",    icon: Clock,          bg: "bg-amber-500/10" },
-                    { label: "Completed",   value: done,       accent: "text-emerald-400",  icon: CheckCircle2,   bg: "bg-emerald-500/10" },
-                    { label: "Overdue",     value: overdue,    accent: "text-red-400",      icon: AlertTriangle,  bg: "bg-red-500/10" },
+                    { label: "Total", value: totalTasks, accent: "text-foreground", icon: CheckSquare, bg: "bg-muted" },
+                    { label: "In Progress", value: inProgress, accent: "text-amber-400", icon: Clock, bg: "bg-amber-500/10" },
+                    { label: "Completed", value: done, accent: "text-emerald-400", icon: CheckCircle2, bg: "bg-emerald-500/10" },
+                    { label: "Overdue", value: overdue, accent: "text-red-400", icon: AlertTriangle, bg: "bg-red-500/10" },
                 ].map(({ label, value, accent, icon: Icon, bg }) => (
                     <div
                         key={label}
@@ -181,10 +181,10 @@ export default function MyTasksPage() {
             <div className="bg-primary-foreground rounded-xl border border-border/50 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <Tabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
                     <TabsList className="h-8">
-                        <TabsTrigger value="all"         className="text-xs px-3">All</TabsTrigger>
-                        <TabsTrigger value="todo"        className="text-xs px-3">To Do</TabsTrigger>
+                        <TabsTrigger value="all" className="text-xs px-3">All</TabsTrigger>
+                        <TabsTrigger value="todo" className="text-xs px-3">To Do</TabsTrigger>
                         <TabsTrigger value="in_progress" className="text-xs px-3">In Progress</TabsTrigger>
-                        <TabsTrigger value="done"        className="text-xs px-3">Done</TabsTrigger>
+                        <TabsTrigger value="done" className="text-xs px-3">Done</TabsTrigger>
                     </TabsList>
                 </Tabs>
 
@@ -240,81 +240,81 @@ export default function MyTasksPage() {
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                        <tr className="border-b border-border/50 bg-muted/30">
-                            <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Task</th>
-                            <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">Project</th>
-                            <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Status</th>
-                            <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Priority</th>
-                            <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden lg:table-cell">Due</th>
-                        </tr>
+                            <tr className="border-b border-border/50 bg-muted/30">
+                                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Task</th>
+                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">Project</th>
+                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Status</th>
+                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Priority</th>
+                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden lg:table-cell">Due</th>
+                            </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
-                        {filtered.map((task) => {
-                            const statusMeta   = STATUS_META[task.status];
-                            const priorityMeta = PRIORITY_META[task.priority];
-                            const isOverdueRow = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "done";
+                            {filtered.map((task) => {
+                                const statusMeta = STATUS_META[task.status];
+                                const priorityMeta = PRIORITY_META[task.priority];
+                                const isOverdueRow = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "done";
 
-                            return (
-                                <tr
-                                    key={task.id}
-                                    onClick={() => setSelectedTask(task)}
-                                    className="hover:bg-muted/20 cursor-pointer transition-colors group"
-                                >
-                                    {/* Title */}
-                                    <td className="px-4 py-3">
-                                        <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[240px]">
-                                            {task.title}
-                                        </p>
-                                        {task.description && (
-                                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                                {task.description}
+                                return (
+                                    <tr
+                                        key={task.id}
+                                        onClick={() => setSelectedTask(task)}
+                                        className="hover:bg-muted/20 cursor-pointer transition-colors group"
+                                    >
+                                        {/* Title */}
+                                        <td className="px-4 py-3">
+                                            <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[240px]">
+                                                {task.title}
                                             </p>
-                                        )}
-                                    </td>
+                                            {task.description && (
+                                                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                                    {task.description}
+                                                </p>
+                                            )}
+                                        </td>
 
-                                    {/* Project */}
-                                    <td className="px-3 py-3 hidden sm:table-cell">
-                                        <Link
-                                            href={`/projects/${task.projectId}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex items-center gap-1.5 hover:underline"
-                                        >
-                                            <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: task.projectColor }} />
-                                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                          {task.projectName}
-                        </span>
-                                        </Link>
-                                    </td>
+                                        {/* Project */}
+                                        <td className="px-3 py-3 hidden sm:table-cell">
+                                            <Link
+                                                href={`/projects/${task.projectId}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex items-center gap-1.5 hover:underline"
+                                            >
+                                                <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: task.projectColor }} />
+                                                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                                    {task.projectName}
+                                                </span>
+                                            </Link>
+                                        </td>
 
-                                    {/* Status */}
-                                    <td className="px-3 py-3 hidden md:table-cell">
-                                        <Badge variant="outline" className={`text-[10px] px-1.5 ${statusMeta.cls}`}>
-                                            {statusMeta.label}
-                                        </Badge>
-                                    </td>
+                                        {/* Status */}
+                                        <td className="px-3 py-3 hidden md:table-cell">
+                                            <Badge variant="outline" className={`text-[10px] px-1.5 ${statusMeta.cls}`}>
+                                                {statusMeta.label}
+                                            </Badge>
+                                        </td>
 
-                                    {/* Priority */}
-                                    <td className="px-3 py-3 hidden md:table-cell">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full ${priorityMeta.dot}`} />
-                                            <span className={`text-xs ${priorityMeta.textCls}`}>{priorityMeta.label}</span>
-                                        </div>
-                                    </td>
+                                        {/* Priority */}
+                                        <td className="px-3 py-3 hidden md:table-cell">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full ${priorityMeta.dot}`} />
+                                                <span className={`text-xs ${priorityMeta.textCls}`}>{priorityMeta.label}</span>
+                                            </div>
+                                        </td>
 
-                                    {/* Due */}
-                                    <td className="px-3 py-3 hidden lg:table-cell">
-                                        {task.dueDate ? (
-                                            <span className={`text-xs flex items-center gap-1 ${isOverdueRow ? "text-red-400" : "text-muted-foreground"}`}>
-                          {isOverdueRow && <AlertTriangle size={10} />}
-                                                {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">—</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                                        {/* Due */}
+                                        <td className="px-3 py-3 hidden lg:table-cell">
+                                            {task.dueDate ? (
+                                                <span className={`text-xs flex items-center gap-1 ${isOverdueRow ? "text-red-400" : "text-muted-foreground"}`}>
+                                                    {isOverdueRow && <AlertTriangle size={10} />}
+                                                    {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}

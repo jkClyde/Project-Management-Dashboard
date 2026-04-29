@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TaskDetail } from "@/types/task";
+import { TaskDetail } from "../../types/task";
 
 interface UseMyTasksReturn {
     tasks: TaskDetail[];
@@ -55,7 +55,7 @@ export function useMyTasks(): UseMyTasksReturn {
 
     // ── UPDATE ───────────────────────────────────────────
     const updateTask = useCallback(
-        async (taskId: string, updates: any) => {
+        async (taskId: string, updates: Partial<Omit<TaskDetail, "comments">>) => {
             setTasks((prev) =>
                 prev.map((t) =>
                     t.id === taskId ? { ...t, ...updates } : t
