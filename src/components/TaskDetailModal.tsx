@@ -237,7 +237,7 @@ export default function TaskDetailModal({
                     />
 
                     {/* COMMENTS */}
-                    {currentTask.comments.map((c) => (
+                    {(currentTask.comments ?? []).map((c) => (
                         <div key={c.id}>{c.body}</div>
                     ))}
 
