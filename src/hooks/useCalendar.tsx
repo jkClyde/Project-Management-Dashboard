@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getMyTasks } from "@/lib/actions/task";
+import { getProjects } from "@/lib/actions/prisma";
 import { CalendarTask, CalendarProject } from "../../types/Calendar";
 
 interface UseCalendarReturn {
@@ -21,43 +23,35 @@ export function useCalendar(): UseCalendarReturn {
         setLoading(true);
         setError(null);
         try {
-            // Fetch in parallel — adjust endpoints to match your API
-            const [tasksRes, projectsRes] = await Promise.all([
-                fetch("/api/tasks?calendar=true"),   // returns CalendarTask[]
-                fetch("/api/projects"),               // returns ProjectWithStats[]
+            const [tasksData, projectsData] = await Promise.all([
+                getMyTasks(),
+                getProjects("all"),
             ]);
 
-            if (!tasksRes.ok) throw new Error(`Tasks fetch failed (${tasksRes.status})`);
-            if (!projectsRes.ok) throw new Error(`Projects fetch failed (${projectsRes.status})`);
-
-            const tasksData = await tasksRes.json();
-            const projectsData = await projectsRes.json();
-
-            // Normalise tasks — only keep ones with a dueDate
-            const calTasks: CalendarTask[] = (tasksData as any[])
+            // Only keep tasks that have a dueDate
+            const calTasks: CalendarTask[] = tasksData
                 .filter((t) => !!t.dueDate)
                 .map((t) => ({
                     id: t.id,
                     title: t.title,
                     status: t.status,
                     priority: t.priority,
-                    dueDate: t.dueDate,
+                    dueDate: t.dueDate!.split("T")[0],
                     projectId: t.projectId,
                     projectName: t.projectName,
                     projectColor: t.projectColor,
-                    assigneeId: t.assignee?.id ?? t.assigneeId ?? null,
-                    assigneeName: t.assignee?.fullName ?? t.assigneeName ?? null,
-                    assigneeAvatar: t.assignee?.avatarUrl ?? t.assigneeAvatar ?? null,
+                    assigneeId: t.assignee?.id ?? null,
+                    assigneeName: t.assignee?.fullName ?? null,
+                    assigneeAvatar: t.assignee?.avatarUrl ?? null,
                 }));
 
-            // Normalise projects
-            const calProjects: CalendarProject[] = (projectsData as any[]).map((p) => ({
+            const calProjects: CalendarProject[] = projectsData.map((p) => ({
                 id: p.id,
                 name: p.name,
-                color: p.color ?? "#6366f1",
-                icon: p.icon ?? "📁",
-                status: p.status ?? "active",
-                dueDate: p.dueDate ?? null,
+                color: p.color,
+                icon: p.icon,
+                status: p.status,
+                dueDate: null,
             }));
 
             setTasks(calTasks);

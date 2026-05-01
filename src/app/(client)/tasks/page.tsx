@@ -5,18 +5,14 @@ import Link from "next/link";
 import {
     CheckSquare,
     Clock,
-    Flag,
-    FolderKanban,
     Search,
     SlidersHorizontal,
-    Calendar,
     AlertTriangle,
     CircleDot,
     CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Select,
     SelectContent,
@@ -26,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMyTasks } from "@/hooks/useMyTasks";        // ← hook you'll create
+import { useMyTasks } from "@/hooks/useMyTasks";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import { TaskDetail, TaskStatus, TaskPriority } from "../../../../types/task";
 
@@ -35,23 +31,23 @@ import { TaskDetail, TaskStatus, TaskPriority } from "../../../../types/task";
 type FilterTab = "all" | TaskStatus;
 
 const STATUS_META: Record<TaskStatus, { label: string; cls: string; icon: React.ElementType }> = {
-    todo: { label: "To Do", cls: "bg-slate-500/10 text-slate-400 border-slate-500/20", icon: CircleDot },
-    in_progress: { label: "In Progress", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Clock },
-    done: { label: "Done", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: CheckCircle2 },
+    todo:        { label: "To Do",       cls: "bg-slate-500/10 text-slate-400 border-slate-500/20",   icon: CircleDot },
+    in_progress: { label: "In Progress", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20",  icon: Clock },
+    done:        { label: "Done",        cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: CheckCircle2 },
 };
 
 const PRIORITY_META: Record<TaskPriority, { label: string; dot: string; textCls: string }> = {
-    low: { label: "Low", dot: "bg-sky-400", textCls: "text-sky-400" },
+    low:    { label: "Low",    dot: "bg-sky-400",    textCls: "text-sky-400" },
     medium: { label: "Medium", dot: "bg-yellow-400", textCls: "text-yellow-400" },
-    high: { label: "High", dot: "bg-orange-400", textCls: "text-orange-400" },
-    urgent: { label: "Urgent", dot: "bg-red-400", textCls: "text-red-400" },
+    high:   { label: "High",   dot: "bg-orange-400", textCls: "text-orange-400" },
+    urgent: { label: "Urgent", dot: "bg-red-400",    textCls: "text-red-400" },
 };
 
 const SORT_OPTIONS = [
-    { value: "due", label: "Due date" },
+    { value: "due",      label: "Due date" },
     { value: "priority", label: "Priority" },
-    { value: "updated", label: "Last updated" },
-    { value: "project", label: "Project" },
+    { value: "updated",  label: "Last updated" },
+    { value: "project",  label: "Project" },
 ];
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -67,15 +63,14 @@ function getInitials(name?: string | null) {
 
 function TaskRowSkeleton() {
     return (
-        <div className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
-            <Skeleton className="w-4 h-4 rounded" />
-            <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-1/2" />
+        <div className="flex items-center gap-4 px-5 py-4 border-b border-border/50">
+            <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-3 w-1/4" />
             </div>
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-14 rounded-full hidden sm:block" />
-            <Skeleton className="h-3 w-20 hidden md:block" />
+            <Skeleton className="h-6 w-20 rounded-full hidden sm:block" />
+            <Skeleton className="h-6 w-16 rounded-full hidden md:block" />
+            <Skeleton className="h-4 w-20 hidden lg:block" />
         </div>
     );
 }
@@ -90,16 +85,15 @@ export default function MyTasksPage() {
 
     const { tasks, loading, error, updateTask, deleteTask, addComment, deleteComment } = useMyTasks();
 
-    // ── Derived stats ────────────────────────────────────────────────────────────
+    // ── Derived stats ─────────────────────────────────────────────────────────
     const totalTasks = tasks.length;
-    const todoDasks = tasks.filter((t) => t.status === "todo").length;
     const inProgress = tasks.filter((t) => t.status === "in_progress").length;
-    const done = tasks.filter((t) => t.status === "done").length;
-    const overdue = tasks.filter(
+    const done       = tasks.filter((t) => t.status === "done").length;
+    const overdue    = tasks.filter(
         (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "done"
     ).length;
 
-    // ── Filter + sort ────────────────────────────────────────────────────────────
+    // ── Filter + sort ─────────────────────────────────────────────────────────
     const filtered = useMemo(() => {
         let list = [...tasks];
 
@@ -136,76 +130,75 @@ export default function MyTasksPage() {
         return list;
     }, [tasks, tab, search, sort]);
 
-    // ── Render ───────────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
 
-            {/* Header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-                        <CheckSquare size={22} className="text-primary" />
-                        My Tasks
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        All tasks assigned to you across every project
-                    </p>
-                </div>
+            {/* ── Header ── */}
+            <div>
+                <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+                    <CheckSquare size={24} className="text-primary" />
+                    My Tasks
+                </h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                    All tasks assigned to you across every project
+                </p>
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* ── Stat cards ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: "Total", value: totalTasks, accent: "text-foreground", icon: CheckSquare, bg: "bg-muted" },
-                    { label: "In Progress", value: inProgress, accent: "text-amber-400", icon: Clock, bg: "bg-amber-500/10" },
-                    { label: "Completed", value: done, accent: "text-emerald-400", icon: CheckCircle2, bg: "bg-emerald-500/10" },
-                    { label: "Overdue", value: overdue, accent: "text-red-400", icon: AlertTriangle, bg: "bg-red-500/10" },
-                ].map(({ label, value, accent, icon: Icon, bg }) => (
+                    { label: "Total Tasks",  value: totalTasks, sub: `${tasks.filter(t => t.status === "todo").length} to do`, accent: "text-foreground",  icon: CheckSquare,  bg: "bg-muted" },
+                    { label: "In Progress",  value: inProgress, sub: "Currently active",    accent: "text-amber-400",  icon: Clock,         bg: "bg-amber-500/10" },
+                    { label: "Completed",    value: done,       sub: "All done",             accent: "text-emerald-400",icon: CheckCircle2,  bg: "bg-emerald-500/10" },
+                    { label: "Overdue",      value: overdue,    sub: "Need attention",       accent: "text-red-400",    icon: AlertTriangle, bg: "bg-red-500/10" },
+                ].map(({ label, value, sub, accent, icon: Icon, bg }) => (
                     <div
                         key={label}
-                        className="bg-primary-foreground rounded-xl border border-border/50 p-4 flex items-center gap-3"
+                        className="bg-primary-foreground rounded-xl border border-border/50 p-5 flex items-start gap-4"
                     >
-                        <div className={`${bg} rounded-lg p-2.5 shrink-0`}>
-                            <Icon size={16} className={accent} />
+                        <div className={`${bg} rounded-xl p-3 shrink-0`}>
+                            <Icon size={22} className={accent} />
                         </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">{label}</p>
-                            <p className={`text-2xl font-bold leading-tight ${accent}`}>{value}</p>
+                        <div className="min-w-0">
+                            <p className="text-sm text-muted-foreground">{label}</p>
+                            <p className={`text-3xl font-bold leading-tight mt-0.5 ${accent}`}>{value}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{sub}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Filters bar */}
+            {/* ── Filters bar ── */}
             <div className="bg-primary-foreground rounded-xl border border-border/50 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <Tabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
-                    <TabsList className="h-8">
-                        <TabsTrigger value="all" className="text-xs px-3">All</TabsTrigger>
-                        <TabsTrigger value="todo" className="text-xs px-3">To Do</TabsTrigger>
-                        <TabsTrigger value="in_progress" className="text-xs px-3">In Progress</TabsTrigger>
-                        <TabsTrigger value="done" className="text-xs px-3">Done</TabsTrigger>
+                    <TabsList className="h-9">
+                        <TabsTrigger value="all"         className="text-sm px-4">All</TabsTrigger>
+                        <TabsTrigger value="todo"        className="text-sm px-4">To Do</TabsTrigger>
+                        <TabsTrigger value="in_progress" className="text-sm px-4">In Progress</TabsTrigger>
+                        <TabsTrigger value="done"        className="text-sm px-4">Done</TabsTrigger>
                     </TabsList>
                 </Tabs>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:w-52">
-                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <div className="relative flex-1 sm:w-56">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search tasks…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-8 h-8 text-sm"
+                            className="pl-9 h-9 text-sm"
                         />
                     </div>
                     <Select value={sort} onValueChange={setSort}>
-                        <SelectTrigger className="h-8 w-36 text-xs gap-1">
-                            <SlidersHorizontal size={12} />
+                        <SelectTrigger className="h-9 w-40 text-sm gap-1.5">
+                            <SlidersHorizontal size={13} />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             {SORT_OPTIONS.map((o) => (
-                                <SelectItem key={o.value} value={o.value} className="text-xs">
+                                <SelectItem key={o.value} value={o.value} className="text-sm">
                                     {o.label}
                                 </SelectItem>
                             ))}
@@ -214,127 +207,153 @@ export default function MyTasksPage() {
                 </div>
             </div>
 
-            {/* Error */}
+            {/* ── Error ── */}
             {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg px-4 py-3">
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl px-4 py-3">
                     {error}
                 </div>
             )}
 
-            {/* Task table */}
+            {/* ── Task table ── */}
             <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
                 {loading ? (
                     <>
-                        {Array.from({ length: 6 }).map((_, i) => <TaskRowSkeleton key={i} />)}
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <TaskRowSkeleton key={i} />
+                        ))}
                     </>
                 ) : filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <span className="text-4xl mb-3 opacity-40">✅</span>
-                        <h3 className="text-sm font-medium text-foreground mb-1">
-                            {search ? "No tasks match your search" : tab === "all" ? "No tasks assigned to you" : `No ${STATUS_META[tab as TaskStatus]?.label} tasks`}
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <span className="text-5xl mb-4 opacity-40">✅</span>
+                        <h3 className="text-base font-semibold text-foreground mb-1">
+                            {search
+                                ? "No tasks match your search"
+                                : tab === "all"
+                                    ? "No tasks assigned to you"
+                                    : `No ${STATUS_META[tab as TaskStatus]?.label} tasks`}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            {search ? "Try a different search term" : "Tasks assigned to you will appear here"}
+                            {search
+                                ? "Try a different search term"
+                                : "Tasks assigned to you will appear here"}
                         </p>
                     </div>
                 ) : (
-                    <table className="w-full text-sm">
+                    <table className="w-full">
                         <thead>
-                            <tr className="border-b border-border/50 bg-muted/30">
-                                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Task</th>
-                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">Project</th>
-                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Status</th>
-                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Priority</th>
-                                <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden lg:table-cell">Due</th>
-                            </tr>
+                        <tr className="border-b border-border/50 bg-muted/30">
+                            <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Task</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Project</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">Status</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">Priority</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden lg:table-cell">Due</th>
+                        </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
-                            {filtered.map((task) => {
-                                const statusMeta = STATUS_META[task.status];
-                                const priorityMeta = PRIORITY_META[task.priority];
-                                const isOverdueRow = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "done";
+                        {filtered.map((task) => {
+                            const statusMeta   = STATUS_META[task.status];
+                            const priorityMeta = PRIORITY_META[task.priority];
+                            const isOverdueRow =
+                                task.dueDate &&
+                                new Date(task.dueDate) < new Date() &&
+                                task.status !== "done";
 
-                                return (
-                                    <tr
-                                        key={task.id}
-                                        onClick={() => setSelectedTask(task)}
-                                        className="hover:bg-muted/20 cursor-pointer transition-colors group"
-                                    >
-                                        {/* Title */}
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[240px]">
-                                                {task.title}
+                            return (
+                                <tr
+                                    key={task.id}
+                                    onClick={() => setSelectedTask(task)}
+                                    className="hover:bg-muted/20 cursor-pointer transition-colors group"
+                                >
+                                    {/* Title */}
+                                    <td className="px-5 py-4">
+                                        <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[260px]">
+                                            {task.title}
+                                        </p>
+                                        {task.description && (
+                                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                                {task.description}
                                             </p>
-                                            {task.description && (
-                                                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                                    {task.description}
-                                                </p>
-                                            )}
-                                        </td>
+                                        )}
+                                    </td>
 
-                                        {/* Project */}
-                                        <td className="px-3 py-3 hidden sm:table-cell">
-                                            <Link
-                                                href={`/projects/${task.projectId}`}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="flex items-center gap-1.5 hover:underline"
-                                            >
-                                                <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: task.projectColor }} />
-                                                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                    {/* Project */}
+                                    <td className="px-4 py-4 hidden sm:table-cell">
+                                        <Link
+                                            href={`/projects/${task.projectId}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex items-center gap-2 hover:underline"
+                                        >
+                                            <div
+                                                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                                                style={{ backgroundColor: task.projectColor }}
+                                            />
+                                            <span className="text-sm text-muted-foreground truncate max-w-[130px]">
                                                     {task.projectName}
                                                 </span>
-                                            </Link>
-                                        </td>
+                                        </Link>
+                                    </td>
 
-                                        {/* Status */}
-                                        <td className="px-3 py-3 hidden md:table-cell">
-                                            <Badge variant="outline" className={`text-[10px] px-1.5 ${statusMeta.cls}`}>
-                                                {statusMeta.label}
-                                            </Badge>
-                                        </td>
+                                    {/* Status */}
+                                    <td className="px-4 py-4 hidden md:table-cell">
+                                        <Badge
+                                            variant="outline"
+                                            className={`text-[11px] px-2 ${statusMeta.cls}`}
+                                        >
+                                            {statusMeta.label}
+                                        </Badge>
+                                    </td>
 
-                                        {/* Priority */}
-                                        <td className="px-3 py-3 hidden md:table-cell">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={`w-2 h-2 rounded-full ${priorityMeta.dot}`} />
-                                                <span className={`text-xs ${priorityMeta.textCls}`}>{priorityMeta.label}</span>
-                                            </div>
-                                        </td>
-
-                                        {/* Due */}
-                                        <td className="px-3 py-3 hidden lg:table-cell">
-                                            {task.dueDate ? (
-                                                <span className={`text-xs flex items-center gap-1 ${isOverdueRow ? "text-red-400" : "text-muted-foreground"}`}>
-                                                    {isOverdueRow && <AlertTriangle size={10} />}
-                                                    {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    {/* Priority */}
+                                    <td className="px-4 py-4 hidden md:table-cell">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`w-2 h-2 rounded-full ${priorityMeta.dot}`} />
+                                            <span className={`text-sm ${priorityMeta.textCls}`}>
+                                                    {priorityMeta.label}
                                                 </span>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">—</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                        </div>
+                                    </td>
+
+                                    {/* Due */}
+                                    <td className="px-4 py-4 hidden lg:table-cell">
+                                        {task.dueDate ? (
+                                            <span
+                                                className={`text-sm flex items-center gap-1 ${
+                                                    isOverdueRow ? "text-red-400" : "text-muted-foreground"
+                                                }`}
+                                            >
+                                                    {isOverdueRow && <AlertTriangle size={12} />}
+                                                {new Date(task.dueDate).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })}
+                                                </span>
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground">—</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         </tbody>
                     </table>
                 )}
             </div>
 
-            {/* Footer count */}
+            {/* ── Footer count ── */}
             {!loading && filtered.length > 0 && (
-                <p className="text-xs text-muted-foreground text-center pt-1">
+                <p className="text-sm text-muted-foreground text-center pt-1">
                     Showing {filtered.length} of {tasks.length} task{tasks.length !== 1 ? "s" : ""}
                 </p>
             )}
 
-            {/* Task detail modal */}
+            {/* ── Task detail modal ── */}
             <TaskDetailModal
-                task={selectedTask}
+                task={selectedTask ? { ...selectedTask, comments: selectedTask.comments ?? [] } : null}
                 open={!!selectedTask}
                 onClose={() => setSelectedTask(null)}
                 onUpdate={async (id, updates) => {
                     await updateTask(id, updates);
-                    setSelectedTask((prev) => prev ? { ...prev, ...updates } : null);
+                    setSelectedTask((prev) => (prev ? { ...prev, ...updates } : null));
                 }}
                 onDelete={async (id) => {
                     await deleteTask(id);

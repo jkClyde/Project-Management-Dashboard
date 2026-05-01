@@ -50,29 +50,21 @@ function sameDay(a: Date, b: Date) {
     );
 }
 
-function startOfMonth(d: Date) {
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
 function getDaysInMonth(year: number, month: number) {
     return new Date(year, month + 1, 0).getDate();
 }
 
-/** Build the 6-week grid (42 cells) for a given month */
 function buildCalendarGrid(year: number, month: number): Date[] {
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const firstDay = new Date(year, month, 1).getDay();
     const totalDays = getDaysInMonth(year, month);
     const cells: Date[] = [];
 
-    // Pad with previous month days
     for (let i = firstDay - 1; i >= 0; i--) {
         cells.push(new Date(year, month, -i));
     }
-    // Current month
     for (let d = 1; d <= totalDays; d++) {
         cells.push(new Date(year, month, d));
     }
-    // Pad with next month days to reach 42
     let next = 1;
     while (cells.length < 42) {
         cells.push(new Date(year, month + 1, next++));
@@ -80,33 +72,40 @@ function buildCalendarGrid(year: number, month: number): Date[] {
     return cells;
 }
 
-function getInitials(name?: string | null) {
-    if (!name) return "?";
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-}
-
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function CalendarSkeleton() {
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <Skeleton className="h-7 w-40" />
+                <Skeleton className="h-8 w-44" />
                 <div className="flex gap-2">
-                    <Skeleton className="h-8 w-8 rounded-lg" />
-                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-9 w-9 rounded-lg" />
+                    <Skeleton className="h-9 w-9 rounded-lg" />
                 </div>
             </div>
-            <div className="grid grid-cols-7 gap-px bg-border/30 rounded-xl overflow-hidden">
-                {Array.from({ length: 42 }).map((_, i) => (
-                    <Skeleton key={i} className="h-24 rounded-none" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
                 ))}
+            </div>
+            <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
+                <div className="grid grid-cols-7 border-b border-border/50">
+                    {DAYS.map((d) => (
+                        <Skeleton key={d} className="h-10 rounded-none" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-7">
+                    {Array.from({ length: 42 }).map((_, i) => (
+                        <Skeleton key={i} className="h-28 rounded-none" />
+                    ))}
+                </div>
             </div>
         </div>
     );
 }
 
-// ─── Task pill (inside calendar cell) ────────────────────────────────────────
+// ─── Task pill ────────────────────────────────────────────────────────────────
 
 function TaskPill({ task }: { task: CalendarTask }) {
     const isOverdue = new Date(task.dueDate) < new Date() && task.status !== "done";
@@ -137,7 +136,7 @@ function ListRow({ task }: { task: CalendarTask }) {
     return (
         <Link
             href={`/tasks/${task.id}`}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors group"
+            className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/20 transition-colors group"
         >
             <span
                 className="w-2.5 h-2.5 rounded-sm shrink-0"
@@ -147,19 +146,19 @@ function ListRow({ task }: { task: CalendarTask }) {
                 <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                     {task.title}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{task.projectName}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{task.projectName}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-                <Badge variant="outline" className={`text-[10px] px-1.5 hidden sm:inline-flex ${statusMeta.cls}`}>
+            <div className="flex items-center gap-2.5 shrink-0">
+                <Badge variant="outline" className={`text-[11px] px-2 hidden sm:inline-flex ${statusMeta.cls}`}>
                     {statusMeta.label}
                 </Badge>
                 <span className={`w-2 h-2 rounded-full ${PRIORITY_DOT[task.priority]}`} />
                 <span
-                    className={`text-xs flex items-center gap-1 ${
+                    className={`text-sm flex items-center gap-1 ${
                         isOverdue ? "text-red-400" : "text-muted-foreground"
                     }`}
                 >
-                    {isOverdue && <AlertTriangle size={10} />}
+                    {isOverdue && <AlertTriangle size={12} />}
                     {new Date(task.dueDate).toLocaleDateString("en-US", {
                         month: "short", day: "numeric",
                     })}
@@ -183,7 +182,6 @@ export default function CalendarPage() {
 
     const year = current.getFullYear();
     const month = current.getMonth();
-
     const monthLabel = current.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
     // ── Close popover on outside click ────────────────────────────────────────
@@ -197,13 +195,12 @@ export default function CalendarPage() {
         return () => document.removeEventListener("mousedown", handle);
     }, []);
 
-    // ── Filtered tasks ────────────────────────────────────────────────────────
+    // ── Derived data ──────────────────────────────────────────────────────────
     const filteredTasks = useMemo(() => {
         if (filterProject === "all") return tasks;
         return tasks.filter((t) => t.projectId === filterProject);
     }, [tasks, filterProject]);
 
-    // ── Tasks keyed by ISO date ───────────────────────────────────────────────
     const tasksByDate = useMemo(() => {
         const map = new Map<string, CalendarTask[]>();
         for (const task of filteredTasks) {
@@ -214,32 +211,23 @@ export default function CalendarPage() {
         return map;
     }, [filteredTasks]);
 
-    // ── Grid cells ────────────────────────────────────────────────────────────
     const grid = useMemo(() => buildCalendarGrid(year, month), [year, month]);
 
-    // ── List view: tasks in current month sorted by date ─────────────────────
-    const listTasks = useMemo(() => {
-        return filteredTasks
-            .filter((t) => {
-                const d = new Date(t.dueDate);
-                return d.getFullYear() === year && d.getMonth() === month;
-            })
-            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-    }, [filteredTasks, year, month]);
-
-    // ── Stats for current month ───────────────────────────────────────────────
     const monthTasks = useMemo(
-        () =>
-            filteredTasks.filter((t) => {
-                const d = new Date(t.dueDate);
-                return d.getFullYear() === year && d.getMonth() === month;
-            }),
+        () => filteredTasks.filter((t) => {
+            const d = new Date(t.dueDate);
+            return d.getFullYear() === year && d.getMonth() === month;
+        }),
         [filteredTasks, year, month]
     );
-    const monthOverdue = monthTasks.filter(
-        (t) => new Date(t.dueDate) < today && t.status !== "done"
-    ).length;
-    const monthDone = monthTasks.filter((t) => t.status === "done").length;
+
+    const listTasks = useMemo(
+        () => [...monthTasks].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+        [monthTasks]
+    );
+
+    const monthOverdue = monthTasks.filter((t) => new Date(t.dueDate) < today && t.status !== "done").length;
+    const monthDone    = monthTasks.filter((t) => t.status === "done").length;
 
     // ── Navigation ────────────────────────────────────────────────────────────
     const prevMonth = () => setCurrent(new Date(year, month - 1, 1));
@@ -249,51 +237,50 @@ export default function CalendarPage() {
     if (loading) return <CalendarSkeleton />;
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
 
             {/* ── Header ── */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                     <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-                        <CalendarDays size={22} className="text-primary" />
+                        <CalendarDays size={24} className="text-primary" />
                         Calendar
                     </h1>
                     <p className="text-sm text-muted-foreground mt-0.5">
                         Tasks and projects due this month
                     </p>
                 </div>
-
-                {/* View toggle */}
                 <Tabs value={view} onValueChange={(v) => setView(v as "month" | "list")}>
-                    <TabsList className="h-8">
-                        <TabsTrigger value="month" className="text-xs px-3 gap-1.5">
-                            <CalendarDays size={12} /> Month
+                    <TabsList className="h-9">
+                        <TabsTrigger value="month" className="text-sm px-4 gap-1.5">
+                            <CalendarDays size={13} /> Month
                         </TabsTrigger>
-                        <TabsTrigger value="list" className="text-xs px-3 gap-1.5">
-                            <LayoutList size={12} /> List
+                        <TabsTrigger value="list" className="text-sm px-4 gap-1.5">
+                            <LayoutList size={13} /> List
                         </TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
 
             {/* ── Stat cards ── */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                    { label: "This month",  value: monthTasks.length,  accent: "text-foreground",   bg: "bg-muted",           icon: CalendarDays },
-                    { label: "Completed",   value: monthDone,           accent: "text-emerald-400",  bg: "bg-emerald-500/10",  icon: CheckCircle2 },
-                    { label: "Overdue",     value: monthOverdue,        accent: "text-red-400",      bg: "bg-red-500/10",      icon: AlertTriangle },
-                    { label: "Projects",    value: projects.length,     accent: "text-primary",      bg: "bg-primary/10",      icon: FolderKanban },
-                ].map(({ label, value, accent, bg, icon: Icon }) => (
+                    { label: "This Month", value: monthTasks.length, sub: `${monthDone} completed`,         accent: "text-foreground",  bg: "bg-muted",          icon: CalendarDays },
+                    { label: "Completed",  value: monthDone,          sub: "Done this month",               accent: "text-emerald-400", bg: "bg-emerald-500/10", icon: CheckCircle2 },
+                    { label: "Overdue",    value: monthOverdue,       sub: "Need attention",                accent: "text-red-400",     bg: "bg-red-500/10",     icon: AlertTriangle },
+                    { label: "Projects",   value: projects.length,    sub: "Across all projects",           accent: "text-primary",     bg: "bg-primary/10",     icon: FolderKanban },
+                ].map(({ label, value, sub, accent, bg, icon: Icon }) => (
                     <div
                         key={label}
-                        className="bg-primary-foreground rounded-xl border border-border/50 p-4 flex items-center gap-3"
+                        className="bg-primary-foreground rounded-xl border border-border/50 p-5 flex items-start gap-4"
                     >
-                        <div className={`${bg} rounded-lg p-2.5 shrink-0`}>
-                            <Icon size={16} className={accent} />
+                        <div className={`${bg} rounded-xl p-3 shrink-0`}>
+                            <Icon size={22} className={accent} />
                         </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">{label}</p>
-                            <p className={`text-2xl font-bold leading-tight ${accent}`}>{value}</p>
+                        <div className="min-w-0">
+                            <p className="text-sm text-muted-foreground">{label}</p>
+                            <p className={`text-3xl font-bold leading-tight mt-0.5 ${accent}`}>{value}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{sub}</p>
                         </div>
                     </div>
                 ))}
@@ -303,28 +290,28 @@ export default function CalendarPage() {
             <div className="bg-primary-foreground rounded-xl border border-border/50 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 {/* Month navigation */}
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevMonth}>
-                        <ChevronLeft size={14} />
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={prevMonth}>
+                        <ChevronLeft size={15} />
                     </Button>
-                    <span className="text-sm font-medium min-w-[140px] text-center">{monthLabel}</span>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextMonth}>
-                        <ChevronRight size={14} />
+                    <span className="text-sm font-semibold min-w-[148px] text-center">{monthLabel}</span>
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={nextMonth}>
+                        <ChevronRight size={15} />
                     </Button>
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs ml-1"
+                        className="h-9 text-sm px-4 ml-1"
                         onClick={goToday}
                     >
                         Today
                     </Button>
                 </div>
 
-                {/* Project filter */}
+                {/* Project filter pills */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <button
                         onClick={() => setFilterProject("all")}
-                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                        className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
                             filterProject === "all"
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
@@ -336,15 +323,19 @@ export default function CalendarPage() {
                         <button
                             key={p.id}
                             onClick={() => setFilterProject(filterProject === p.id ? "all" : p.id)}
-                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                            className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
                                 filterProject === p.id
                                     ? "border-current"
                                     : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
                             }`}
-                            style={filterProject === p.id ? { color: p.color, borderColor: p.color, backgroundColor: `${p.color}15` } : {}}
+                            style={
+                                filterProject === p.id
+                                    ? { color: p.color, borderColor: p.color, backgroundColor: `${p.color}15` }
+                                    : {}
+                            }
                         >
                             <span>{p.icon}</span>
-                            <span className="max-w-[100px] truncate">{p.name}</span>
+                            <span className="max-w-[110px] truncate">{p.name}</span>
                         </button>
                     ))}
                 </div>
@@ -357,7 +348,7 @@ export default function CalendarPage() {
                 </div>
             )}
 
-            {/* ══════════════════ MONTH VIEW ══════════════════ */}
+            {/* ══════════════ MONTH VIEW ══════════════ */}
             {view === "month" && (
                 <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
                     {/* Day headers */}
@@ -365,7 +356,7 @@ export default function CalendarPage() {
                         {DAYS.map((d) => (
                             <div
                                 key={d}
-                                className="text-center text-xs font-medium text-muted-foreground py-2.5 border-r border-border/30 last:border-r-0"
+                                className="text-center text-xs font-semibold text-muted-foreground py-3 border-r border-border/30 last:border-r-0 uppercase tracking-wide"
                             >
                                 {d}
                             </div>
@@ -376,13 +367,13 @@ export default function CalendarPage() {
                     <div className="grid grid-cols-7 auto-rows-fr">
                         {grid.map((day, idx) => {
                             const isCurrentMonth = day.getMonth() === month;
-                            const isToday = sameDay(day, today);
-                            const key = isoDate(day);
-                            const dayTasks = tasksByDate.get(key) ?? [];
-                            const MAX_VISIBLE = 3;
-                            const visible = dayTasks.slice(0, MAX_VISIBLE);
-                            const overflow = dayTasks.length - MAX_VISIBLE;
-                            const isPopoverOpen = popoverDay ? sameDay(popoverDay, day) : false;
+                            const isToday        = sameDay(day, today);
+                            const key            = isoDate(day);
+                            const dayTasks       = tasksByDate.get(key) ?? [];
+                            const MAX_VISIBLE    = 3;
+                            const visible        = dayTasks.slice(0, MAX_VISIBLE);
+                            const overflow       = dayTasks.length - MAX_VISIBLE;
+                            const isPopoverOpen  = popoverDay ? sameDay(popoverDay, day) : false;
 
                             return (
                                 <div
@@ -392,18 +383,18 @@ export default function CalendarPage() {
                                             setPopoverDay(isPopoverOpen ? null : day);
                                         }
                                     }}
-                                    className={`relative min-h-[90px] sm:min-h-[110px] p-1.5 border-b border-r border-border/30 last:border-r-0 transition-colors
+                                    className={`relative min-h-[100px] sm:min-h-[120px] p-2 border-b border-r border-border/30 last:border-r-0 transition-colors
                                         ${isCurrentMonth ? "bg-transparent" : "bg-muted/20"}
                                         ${dayTasks.length > 0 ? "cursor-pointer hover:bg-muted/20" : ""}
-                                        ${isToday ? "ring-1 ring-inset ring-primary/40" : ""}
+                                        ${isToday ? "ring-1 ring-inset ring-primary/50 bg-primary/[0.02]" : ""}
                                     `}
                                 >
                                     {/* Date number */}
-                                    <div className="flex justify-end mb-1">
+                                    <div className="flex justify-end mb-1.5">
                                         <span
-                                            className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium
-                                                ${isToday ? "bg-primary text-primary-foreground" : ""}
-                                                ${!isCurrentMonth ? "text-muted-foreground/40" : "text-foreground"}
+                                            className={`text-xs w-7 h-7 flex items-center justify-center rounded-full font-medium transition-colors
+                                                ${isToday ? "bg-primary text-primary-foreground font-semibold" : ""}
+                                                ${!isCurrentMonth ? "text-muted-foreground/30" : "text-foreground"}
                                             `}
                                         >
                                             {day.getDate()}
@@ -416,7 +407,7 @@ export default function CalendarPage() {
                                             <TaskPill key={task.id} task={task} />
                                         ))}
                                         {overflow > 0 && (
-                                            <p className="text-[10px] text-muted-foreground px-1">
+                                            <p className="text-[10px] text-muted-foreground px-1 mt-0.5">
                                                 +{overflow} more
                                             </p>
                                         )}
@@ -439,74 +430,72 @@ export default function CalendarPage() {
                 </div>
             )}
 
-            {/* ══════════════════ LIST VIEW ══════════════════ */}
+            {/* ══════════════ LIST VIEW ══════════════ */}
             {view === "list" && (
                 <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
                     {listTasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                            <CalendarDays size={32} className="text-muted-foreground/30 mb-3" />
-                            <p className="text-sm font-medium text-foreground mb-1">No tasks due this month</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <CalendarDays size={40} className="text-muted-foreground/30 mb-4" />
+                            <p className="text-base font-semibold text-foreground mb-1">No tasks due this month</p>
+                            <p className="text-sm text-muted-foreground">
                                 Tasks with due dates in {monthLabel} will appear here
                             </p>
                         </div>
                     ) : (
-                        <>
-                            {/* Group by date */}
-                            {(() => {
-                                const grouped = new Map<string, CalendarTask[]>();
-                                for (const t of listTasks) {
-                                    const key = t.dueDate.split("T")[0];
-                                    if (!grouped.has(key)) grouped.set(key, []);
-                                    grouped.get(key)!.push(t);
-                                }
-                                return Array.from(grouped.entries()).map(([dateKey, dayTasks]) => {
-                                    const d = new Date(dateKey + "T00:00:00");
-                                    const isToday = sameDay(d, today);
-                                    const isPast = d < today && !isToday;
-                                    return (
-                                        <div key={dateKey}>
-                                            {/* Date header */}
-                                            <div className={`px-4 py-2 border-b border-border/40 flex items-center gap-2
+                        (() => {
+                            const grouped = new Map<string, CalendarTask[]>();
+                            for (const t of listTasks) {
+                                const key = t.dueDate.split("T")[0];
+                                if (!grouped.has(key)) grouped.set(key, []);
+                                grouped.get(key)!.push(t);
+                            }
+                            return Array.from(grouped.entries()).map(([dateKey, dayTasks]) => {
+                                const d       = new Date(dateKey + "T00:00:00");
+                                const isToday = sameDay(d, today);
+                                const isPast  = d < today && !isToday;
+                                return (
+                                    <div key={dateKey}>
+                                        {/* Date group header */}
+                                        <div
+                                            className={`px-5 py-2.5 border-b border-border/40 flex items-center gap-2.5
                                                 ${isToday ? "bg-primary/5" : "bg-muted/20"}`}
+                                        >
+                                            <span
+                                                className={`text-sm font-medium ${
+                                                    isToday
+                                                        ? "text-primary"
+                                                        : isPast
+                                                            ? "text-red-400"
+                                                            : "text-foreground"
+                                                }`}
                                             >
-                                                <span
-                                                    className={`text-xs font-medium ${
-                                                        isToday
-                                                            ? "text-primary"
-                                                            : isPast
-                                                                ? "text-red-400"
-                                                                : "text-foreground"
-                                                    }`}
-                                                >
-                                                    {d.toLocaleDateString("en-US", {
-                                                        weekday: "short",
-                                                        month: "short",
-                                                        day: "numeric",
-                                                    })}
-                                                </span>
-                                                {isToday && (
-                                                    <Badge className="text-[9px] h-4 px-1.5 bg-primary/10 text-primary border-primary/20">
-                                                        Today
-                                                    </Badge>
-                                                )}
-                                                {isPast && (
-                                                    <AlertTriangle size={11} className="text-red-400" />
-                                                )}
-                                                <span className="text-[11px] text-muted-foreground ml-auto">
-                                                    {dayTasks.length} task{dayTasks.length !== 1 ? "s" : ""}
-                                                </span>
-                                            </div>
-                                            <div className="divide-y divide-border/30">
-                                                {dayTasks.map((task) => (
-                                                    <ListRow key={task.id} task={task} />
-                                                ))}
-                                            </div>
+                                                {d.toLocaleDateString("en-US", {
+                                                    weekday: "short",
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })}
+                                            </span>
+                                            {isToday && (
+                                                <Badge className="text-[10px] h-5 px-2 bg-primary/10 text-primary border-primary/20">
+                                                    Today
+                                                </Badge>
+                                            )}
+                                            {isPast && (
+                                                <AlertTriangle size={13} className="text-red-400" />
+                                            )}
+                                            <span className="text-xs text-muted-foreground ml-auto">
+                                                {dayTasks.length} task{dayTasks.length !== 1 ? "s" : ""}
+                                            </span>
                                         </div>
-                                    );
-                                });
-                            })()}
-                        </>
+                                        <div className="divide-y divide-border/30">
+                                            {dayTasks.map((task) => (
+                                                <ListRow key={task.id} task={task} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()
                     )}
                 </div>
             )}
@@ -515,8 +504,8 @@ export default function CalendarPage() {
             <div className="flex items-center gap-4 flex-wrap justify-end pb-1">
                 {projects.slice(0, 6).map((p) => (
                     <div key={p.id} className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: p.color }} />
-                        <span className="text-[11px] text-muted-foreground truncate max-w-[80px]">{p.name}</span>
+                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
+                        <span className="text-xs text-muted-foreground truncate max-w-[90px]">{p.name}</span>
                     </div>
                 ))}
             </div>

@@ -25,10 +25,10 @@ import { ProjectStatus } from "../../../../types/projects";
 type FilterTab = "all" | ProjectStatus;
 
 const SORT_OPTIONS = [
-    { value: "updated", label: "Last updated" },
-    { value: "name",    label: "Name A–Z" },
-    { value: "tasks",   label: "Most tasks" },
-    { value: "progress",label: "Progress" },
+    { value: "updated",  label: "Last updated" },
+    { value: "name",     label: "Name A–Z" },
+    { value: "tasks",    label: "Most tasks" },
+    { value: "progress", label: "Progress" },
 ];
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
@@ -36,24 +36,27 @@ const SORT_OPTIONS = [
 function StatCard({
                       label,
                       value,
+                      sub,
                       accent = "text-foreground",
                       icon: Icon,
                       iconBg = "bg-muted",
                   }: {
     label: string;
     value: string | number;
+    sub?: string;
     accent?: string;
     icon: React.ElementType;
     iconBg?: string;
 }) {
     return (
-        <div className="bg-primary-foreground rounded-xl border border-border/50 p-4 flex items-center gap-4">
-            <div className={`${iconBg} rounded-lg p-2.5 shrink-0`}>
-                <Icon size={18} className={accent} />
+        <div className="bg-primary-foreground rounded-xl border border-border/50 p-5 flex items-start gap-4">
+            <div className={`${iconBg} rounded-xl p-3 shrink-0`}>
+                <Icon size={22} className={accent} />
             </div>
-            <div>
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className={`text-2xl font-bold leading-tight ${accent}`}>{value}</p>
+            <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className={`text-3xl font-bold leading-tight mt-0.5 ${accent}`}>{value}</p>
+                {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
             </div>
         </div>
     );
@@ -64,26 +67,26 @@ function StatCard({
 function ProjectCardSkeleton() {
     return (
         <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
-            <Skeleton className="h-1 w-full rounded-none" />
-            <div className="p-4 space-y-3">
-                <div className="flex items-center gap-2.5">
-                    <Skeleton className="w-9 h-9 rounded-lg shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-1.5 w-full rounded-none" />
+            <div className="p-5 space-y-4">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="w-11 h-11 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
                         <Skeleton className="h-3 w-1/2" />
                     </div>
                 </div>
-                <Skeleton className="h-5 w-16 rounded-full" />
-                <div className="space-y-1.5">
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <div className="space-y-2">
                     <div className="flex justify-between">
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-3 w-8" />
+                        <Skeleton className="h-3.5 w-20" />
+                        <Skeleton className="h-3.5 w-10" />
                     </div>
-                    <Skeleton className="h-1.5 w-full rounded-full" />
+                    <Skeleton className="h-2 w-full rounded-full" />
                 </div>
-                <div className="flex justify-between pt-2 border-t border-border/50">
-                    <Skeleton className="h-4 w-16" />
+                <div className="flex justify-between pt-3 border-t border-border/50">
                     <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
                 </div>
             </div>
         </div>
@@ -143,7 +146,7 @@ export default function ProjectsPage() {
     const overallPct     = totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
 
             {/* ── Header ── */}
             <div className="flex items-center justify-between">
@@ -153,8 +156,8 @@ export default function ProjectsPage() {
                         Manage and track all your projects
                     </p>
                 </div>
-                <Button onClick={() => setModal(true)} size="sm" className="gap-1.5">
-                    <Plus size={15} />
+                <Button onClick={() => setModal(true)} size="sm" className="gap-1.5 h-9 px-4 text-sm">
+                    <Plus size={16} />
                     New project
                 </Button>
             </div>
@@ -162,8 +165,9 @@ export default function ProjectsPage() {
             {/* ── Stat cards ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    label="Total projects"
+                    label="Total Projects"
                     value={projects.length}
+                    sub={`${totalActive} active · ${totalCompleted} completed`}
                     icon={FolderKanban}
                     accent="text-primary"
                     iconBg="bg-primary/10"
@@ -171,6 +175,7 @@ export default function ProjectsPage() {
                 <StatCard
                     label="Active"
                     value={totalActive}
+                    sub="Currently in progress"
                     icon={Layers}
                     accent="text-emerald-500"
                     iconBg="bg-emerald-500/10"
@@ -178,13 +183,15 @@ export default function ProjectsPage() {
                 <StatCard
                     label="Completed"
                     value={totalCompleted}
+                    sub="All tasks done"
                     icon={CheckCircle2}
                     accent="text-sky-500"
                     iconBg="bg-sky-500/10"
                 />
                 <StatCard
-                    label="Overall progress"
+                    label="Overall Progress"
                     value={`${overallPct}%`}
+                    sub={`${totalDone} of ${totalTasks} tasks done`}
                     icon={TrendingUp}
                     accent="text-violet-500"
                     iconBg="bg-violet-500/10"
@@ -194,64 +201,61 @@ export default function ProjectsPage() {
             {/* ── Filters bar ── */}
             <div className="bg-primary-foreground rounded-xl border border-border/50 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <Tabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
-                    <TabsList className="h-8">
-                        <TabsTrigger value="all"       className="text-xs px-3">All</TabsTrigger>
-                        <TabsTrigger value="active"    className="text-xs px-3">Active</TabsTrigger>
-                        <TabsTrigger value="completed" className="text-xs px-3">Completed</TabsTrigger>
-                        <TabsTrigger value="archived"  className="text-xs px-3">Archived</TabsTrigger>
+                    <TabsList className="h-9">
+                        <TabsTrigger value="all"       className="text-sm px-4">All</TabsTrigger>
+                        <TabsTrigger value="active"    className="text-sm px-4">Active</TabsTrigger>
+                        <TabsTrigger value="completed" className="text-sm px-4">Completed</TabsTrigger>
+                        <TabsTrigger value="archived"  className="text-sm px-4">Archived</TabsTrigger>
                     </TabsList>
                 </Tabs>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    {/* Search */}
-                    <div className="relative flex-1 sm:w-52">
-                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <div className="relative flex-1 sm:w-56">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search projects…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-8 h-8 text-sm"
+                            className="pl-9 h-9 text-sm"
                         />
                     </div>
 
-                    {/* Sort */}
                     <Select value={sort} onValueChange={setSort}>
-                        <SelectTrigger className="h-8 w-36 text-xs gap-1">
-                            <SlidersHorizontal size={12} />
+                        <SelectTrigger className="h-9 w-40 text-sm gap-1.5">
+                            <SlidersHorizontal size={13} />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             {SORT_OPTIONS.map((o) => (
-                                <SelectItem key={o.value} value={o.value} className="text-xs">
+                                <SelectItem key={o.value} value={o.value} className="text-sm">
                                     {o.label}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
 
-                    {/* View toggle */}
                     <div className="flex border border-border rounded-lg overflow-hidden">
                         <button
                             onClick={() => setView("grid")}
-                            className={`p-1.5 transition-colors ${
+                            className={`p-2 transition-colors ${
                                 view === "grid"
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                             }`}
                             aria-label="Grid view"
                         >
-                            <LayoutGrid size={14} />
+                            <LayoutGrid size={15} />
                         </button>
                         <button
                             onClick={() => setView("list")}
-                            className={`p-1.5 transition-colors ${
+                            className={`p-2 transition-colors ${
                                 view === "list"
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                             }`}
                             aria-label="List view"
                         >
-                            <List size={14} />
+                            <List size={15} />
                         </button>
                     </div>
                 </div>
@@ -276,21 +280,21 @@ export default function ProjectsPage() {
                     ))}
                 </div>
             ) : filtered.length === 0 ? (
-                <div className="bg-primary-foreground rounded-xl border border-border/50 flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4 opacity-60">
-                        <FolderKanban size={26} className="text-muted-foreground" />
+                <div className="bg-primary-foreground rounded-xl border border-border/50 flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4 opacity-60">
+                        <FolderKanban size={30} className="text-muted-foreground" />
                     </div>
-                    <h3 className="text-sm font-semibold text-foreground mb-1">
+                    <h3 className="text-base font-semibold text-foreground mb-1.5">
                         {search ? "No projects match your search" : "No projects yet"}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-5 max-w-xs">
+                    <p className="text-sm text-muted-foreground mb-6 max-w-xs">
                         {search
                             ? "Try a different search term or clear the filter"
                             : "Create your first project to start tracking tasks and progress"}
                     </p>
                     {!search && (
                         <Button onClick={() => setModal(true)} size="sm" className="gap-1.5">
-                            <Plus size={14} />
+                            <Plus size={15} />
                             New project
                         </Button>
                     )}
@@ -312,7 +316,7 @@ export default function ProjectsPage() {
                         ))}
                     </div>
 
-                    <p className="text-xs text-muted-foreground text-center pt-1">
+                    <p className="text-sm text-muted-foreground text-center pt-1">
                         Showing {filtered.length} of {projects.length} project
                         {projects.length !== 1 ? "s" : ""}
                     </p>

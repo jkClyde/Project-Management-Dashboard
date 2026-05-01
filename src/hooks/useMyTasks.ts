@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import {
+    getMyTasks,
+    updateTask as updateTaskAction,
+    deleteTask as deleteTaskAction,
+} from "@/lib/actions/task";
 import { TaskDetail } from "../../types/task";
 
 interface UseMyTasksReturn {
     tasks: TaskDetail[];
     loading: boolean;
     error: string | null;
-    updateTask: (
-        taskId: string,
-        updates: Partial<Omit<TaskDetail, "comments">>
-    ) => Promise<void>;
+    updateTask: (taskId: string, updates: Partial<Omit<TaskDetail, "comments">>) => Promise<void>;
     deleteTask: (taskId: string) => Promise<void>;
     addComment: (taskId: string, body: string) => Promise<void>;
     deleteComment: (taskId: string, commentId: string) => Promise<void>;
@@ -21,29 +23,15 @@ export function useMyTasks(): UseMyTasksReturn {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // ── FETCH ─────────────────────────────────────────────
+    // ── Fetch ──────────────────────────────────────────────────────────────────
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         setError(null);
-
         try {
-            const res = await fetch("/api/tasks/mine", {
-                credentials: "include", // IMPORTANT
-            });
-
-            if (!res.ok) {
-                if (res.status === 401) {
-                    throw new Error("Unauthorized");
-                }
-                throw new Error("Failed to fetch tasks");
-            }
-
-            const data = await res.json();
-            setTasks(data);
+            const data = await getMyTasks();
+            setTasks(data as TaskDetail[]);
         } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "Unknown error"
-            );
+            setError(err instanceof Error ? err.message : "Failed to load tasks");
         } finally {
             setLoading(false);
         }
@@ -53,142 +41,69 @@ export function useMyTasks(): UseMyTasksReturn {
         fetchTasks();
     }, [fetchTasks]);
 
-    // ── UPDATE ───────────────────────────────────────────
+    // ── Update ─────────────────────────────────────────────────────────────────
     const updateTask = useCallback(
         async (taskId: string, updates: Partial<Omit<TaskDetail, "comments">>) => {
+            // Optimistic update
             setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId ? { ...t, ...updates } : t
-                )
+                prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
             );
-
             try {
-                const res = await fetch(`/api/tasks/${taskId}`, {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(updates),
-                });
+                // Map TaskDetail fields back to Prisma-compatible shape
+                const prismaUpdates: Record<string, any> = {};
+                if (updates.title !== undefined)       prismaUpdates.title = updates.title;
+                if (updates.description !== undefined) prismaUpdates.description = updates.description;
+                if (updates.status !== undefined)      prismaUpdates.status = updates.status;
+                if (updates.priority !== undefined)    prismaUpdates.priority = updates.priority;
+                if (updates.dueDate !== undefined)     prismaUpdates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+                if (updates.assignee !== undefined)    prismaUpdates.assigneeId = updates.assignee?.id ?? null;
 
-                if (!res.ok)
-                    throw new Error("Failed to update task");
-
-                const updated = await res.json();
-
-                setTasks((prev) =>
-                    prev.map((t) =>
-                        t.id === taskId ? { ...t, ...updated } : t
-                    )
-                );
-            } catch {
-                await fetchTasks();
+                await updateTaskAction(taskId, prismaUpdates);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Update failed");
+                fetchTasks(); // roll back
             }
         },
         [fetchTasks]
     );
 
-    // ── DELETE ───────────────────────────────────────────
+    // ── Delete ─────────────────────────────────────────────────────────────────
     const deleteTask = useCallback(
         async (taskId: string) => {
-            setTasks((prev) =>
-                prev.filter((t) => t.id !== taskId)
-            );
-
+            setTasks((prev) => prev.filter((t) => t.id !== taskId));
             try {
-                const res = await fetch(`/api/tasks/${taskId}`, {
-                    method: "DELETE",
-                });
-
-                if (!res.ok)
-                    throw new Error("Failed to delete task");
-            } catch {
-                await fetchTasks();
+                await deleteTaskAction(taskId);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Delete failed");
+                fetchTasks(); // roll back
             }
         },
         [fetchTasks]
     );
 
-    // ── ADD COMMENT ──────────────────────────────────────
-    const addComment = useCallback(
-        async (taskId: string, body: string) => {
-            try {
-                const res = await fetch(
-                    `/api/tasks/${taskId}/comments`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ body }),
-                    }
-                );
+    // ── Add comment ───────────────────────────────────────────────────────────
+    // Comments are not managed via server actions yet — stub kept for modal compatibility
+    const addComment = useCallback(async (_taskId: string, _body: string) => {
+        // TODO: add a createComment server action to src/lib/actions/task.ts
+        // Then call it here and append the result to the matching task's comments array
+        console.warn("addComment: no server action implemented yet");
+    }, []);
 
-                if (!res.ok)
-                    throw new Error("Failed to add comment");
-
-                const newComment = await res.json();
-
-                setTasks((prev) =>
-                    prev.map((t) =>
-                        t.id === taskId
-                            ? {
-                                ...t,
-                                comments: [
-                                    ...t.comments,
-                                    newComment,
-                                ],
-                            }
-                            : t
-                    )
-                );
-            } catch (err) {
-                console.error(err);
-            }
-        },
-        []
-    );
-
-    // ── DELETE COMMENT ───────────────────────────────────
+    // ── Delete comment ────────────────────────────────────────────────────────
     const deleteComment = useCallback(
         async (taskId: string, commentId: string) => {
             setTasks((prev) =>
                 prev.map((t) =>
                     t.id === taskId
-                        ? {
-                            ...t,
-                            comments: t.comments.filter(
-                                (c) => c.id !== commentId
-                            ),
-                        }
+                        ? { ...t, comments: (t.comments ?? []).filter((c) => c.id !== commentId) }
                         : t
                 )
             );
-
-            try {
-                const res = await fetch(
-                    `/api/tasks/${taskId}/comments/${commentId}`,
-                    {
-                        method: "DELETE",
-                    }
-                );
-
-                if (!res.ok)
-                    throw new Error("Failed to delete comment");
-            } catch {
-                await fetchTasks();
-            }
+            // TODO: add a deleteComment server action to src/lib/actions/task.ts
+            console.warn("deleteComment: no server action implemented yet");
         },
-        [fetchTasks]
+        []
     );
 
-    return {
-        tasks,
-        loading,
-        error,
-        updateTask,
-        deleteTask,
-        addComment,
-        deleteComment,
-    };
+    return { tasks, loading, error, updateTask, deleteTask, addComment, deleteComment };
 }

@@ -147,3 +147,44 @@ export async function deleteTask(taskId: string) {
 
     revalidatePath(`/projects/${task.projectId}`);
 }
+
+
+export async function getMyTasks() {
+    const user = await getAuthUser();
+
+    const tasks = await prisma.task.findMany({
+        where: { assigneeId: user.id },
+        include: {
+            assignee: {
+                select: { id: true, fullName: true, avatarUrl: true, email: true },
+            },
+            project: {
+                select: { id: true, name: true, color: true },
+            },
+        },
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+    });
+
+    return tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description ?? null,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+        projectId: t.projectId,
+        projectName: t.project.name,
+        projectColor: t.project.color ?? "#6366f1",
+        assignee: t.assignee
+            ? {
+                id: t.assignee.id,
+                fullName: t.assignee.fullName ?? null,
+                avatarUrl: t.assignee.avatarUrl ?? null,
+                email: t.assignee.email ?? null,
+            }
+            : null,
+        createdAt: t.createdAt?.toISOString() ?? new Date().toISOString(),
+        updatedAt: t.updatedAt?.toISOString() ?? new Date().toISOString(),
+        comments: [], // comments are loaded separately when opening a task
+    }));
+}

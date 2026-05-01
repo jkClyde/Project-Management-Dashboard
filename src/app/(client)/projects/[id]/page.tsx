@@ -11,6 +11,8 @@ import {
     LayoutGrid,
     List,
     Settings,
+    Clock,
+    AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,101 +24,81 @@ import { useProjectDetail } from "@/hooks/useProjectDetail";
 import KanbanBoard from "@/components/KanbanBoard";
 
 type TaskStatus = "todo" | "in_progress" | "done";
+type TaskPriority = "low" | "medium" | "high" | "urgent";
 type ProjectStatus = "active" | "completed" | "archived";
 
 function getInitials(name?: string | null) {
     if (!name) return "?";
-
-    return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function getTaskStatus(status?: string | null): TaskStatus {
-    if (status === "todo" || status === "in_progress" || status === "done") {
-        return status;
-    }
-
+    if (status === "todo" || status === "in_progress" || status === "done") return status;
     return "todo";
 }
 
 function getProjectStatus(status?: string | null): ProjectStatus {
-    if (status === "active" || status === "completed" || status === "archived") {
-        return status;
-    }
-
+    if (status === "active" || status === "completed" || status === "archived") return status;
     return "active";
 }
 
-const statusConfig: Record<
-    ProjectStatus,
-    {
-        label: string;
-        className: string;
-    }
-> = {
-    active: {
-        label: "Active",
-        className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    },
-    completed: {
-        label: "Completed",
-        className: "bg-primary/10 text-primary border-primary/20",
-    },
-    archived: {
-        label: "Archived",
-        className: "bg-muted text-muted-foreground border-border",
-    },
+const PROJECT_STATUS_CONFIG: Record<ProjectStatus, { label: string; className: string }> = {
+    active:    { label: "Active",    className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+    completed: { label: "Completed", className: "bg-primary/10 text-primary border-primary/20" },
+    archived:  { label: "Archived",  className: "bg-muted text-muted-foreground border-border" },
 };
 
-const listStatusLabel: Record<TaskStatus, string> = {
-    todo: "To Do",
+const LIST_STATUS_LABEL: Record<TaskStatus, string> = {
+    todo:        "To Do",
     in_progress: "In Progress",
-    done: "Done",
+    done:        "Done",
 };
 
-const listStatusColor: Record<TaskStatus, string> = {
-    todo: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+const LIST_STATUS_COLOR: Record<TaskStatus, string> = {
+    todo:        "bg-slate-500/10 text-slate-400 border-slate-500/20",
     in_progress: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    done: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    done:        "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 
-const statusOrder: Record<TaskStatus, number> = {
-    todo: 0,
-    in_progress: 1,
-    done: 2,
+const PRIORITY_CONFIG: Record<TaskPriority, { dot: string; textCls: string; label: string }> = {
+    low:    { dot: "bg-sky-400",    textCls: "text-sky-400",    label: "Low" },
+    medium: { dot: "bg-yellow-400", textCls: "text-yellow-400", label: "Medium" },
+    high:   { dot: "bg-orange-400", textCls: "text-orange-400", label: "High" },
+    urgent: { dot: "bg-red-400",    textCls: "text-red-400",    label: "Urgent" },
 };
+
+const STATUS_ORDER: Record<TaskStatus, number> = { todo: 0, in_progress: 1, done: 2 };
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function PageSkeleton() {
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             <Skeleton className="h-4 w-48" />
-            <div className="bg-primary-foreground rounded-lg border border-border/50 p-5 space-y-4">
-                <div className="flex items-center gap-3">
-                    <Skeleton className="w-12 h-12 rounded-xl" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-3.5 w-72" />
+            <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
+                <Skeleton className="h-1.5 w-full rounded-none" />
+                <div className="p-6 space-y-5">
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                        <div className="space-y-2 flex-1">
+                            <Skeleton className="h-6 w-56" />
+                            <Skeleton className="h-4 w-80" />
+                        </div>
                     </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-16 rounded-lg" />
-                    ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => (
+                            <Skeleton key={i} className="h-20 rounded-xl" />
+                        ))}
+                    </div>
+                    <Skeleton className="h-4 w-full rounded-full" />
                 </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
                 {[...Array(3)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="bg-primary-foreground rounded-lg border border-border/50 p-3 space-y-2"
-                    >
-                        <Skeleton className="h-4 w-24" />
+                    <div key={i} className="bg-primary-foreground rounded-xl border border-border/50 p-4 space-y-3">
+                        <Skeleton className="h-5 w-24" />
                         {[...Array(2)].map((_, j) => (
-                            <Skeleton key={j} className="h-20 rounded-lg" />
+                            <Skeleton key={j} className="h-24 rounded-lg" />
                         ))}
                     </div>
                 ))}
@@ -125,34 +107,27 @@ function PageSkeleton() {
     );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ProjectDetailPage({
-    params,
-}: {
+                                              params,
+                                          }: {
     params: Promise<{ id: string }>;
 }) {
     const { id } = use(params);
     const [view, setView] = useState<"board" | "list">("board");
 
-    const {
-        project,
-        loading,
-        error,
-        createTask,
-        updateTask,
-        moveTask,
-        deleteTask,
-    } = useProjectDetail(id);
+    const { project, loading, error, createTask, updateTask, moveTask, deleteTask } =
+        useProjectDetail(id);
 
     if (loading) return <PageSkeleton />;
 
     if (error || !project) {
         return (
-            <div className="bg-primary-foreground rounded-lg border border-border/50 flex flex-col items-center justify-center py-16 text-center">
-                <span className="text-4xl mb-3 opacity-40">⚠️</span>
-                <h3 className="text-sm font-medium text-foreground mb-1">
-                    Project not found
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
+            <div className="bg-primary-foreground rounded-xl border border-border/50 flex flex-col items-center justify-center py-20 text-center">
+                <span className="text-5xl mb-4 opacity-40">⚠️</span>
+                <h3 className="text-base font-semibold text-foreground mb-1">Project not found</h3>
+                <p className="text-sm text-muted-foreground mb-5">
                     {error ?? "This project doesn't exist or you don't have access."}
                 </p>
                 <Button variant="outline" size="sm" asChild>
@@ -162,53 +137,50 @@ export default function ProjectDetailPage({
         );
     }
 
-    const totalTasks = project.tasks.length;
-    const completedTasks = project.tasks.filter(
-        (task) => getTaskStatus(task.status) === "done"
+    const totalTasks     = project.tasks.length;
+    const completedTasks = project.tasks.filter((t) => getTaskStatus(t.status) === "done").length;
+    const inProgressTasks = project.tasks.filter((t) => getTaskStatus(t.status) === "in_progress").length;
+    const todoTasks      = project.tasks.filter((t) => getTaskStatus(t.status) === "todo").length;
+    const overdueTasks   = project.tasks.filter(
+        (t) => t.dueDate && new Date(t.dueDate) < new Date() && getTaskStatus(t.status) !== "done"
     ).length;
-    const inProgressTasks = project.tasks.filter(
-        (task) => getTaskStatus(task.status) === "in_progress"
-    ).length;
-    const progressPct =
-        totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+    const progressPct    = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
     const projectStatus = getProjectStatus(project.status);
-    const status = statusConfig[projectStatus];
-    const projectColor = project.color ?? "#6366f1";
-    const projectIcon = project.icon ?? "📁";
-    const updatedAt = project.updatedAt ?? new Date();
+    const statusCfg     = PROJECT_STATUS_CONFIG[projectStatus];
+    const projectColor  = project.color ?? "#6366f1";
+    const projectIcon   = project.icon ?? "📁";
+    const updatedAt     = project.updatedAt ?? new Date();
 
-    const sortedTasks = [...project.tasks].sort((a, b) => {
-        const aUpdated = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const bUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-
-        return bUpdated - aUpdated;
-    });
-
-    const listTasks = sortedTasks.sort(
-        (a, b) => statusOrder[getTaskStatus(a.status)] - statusOrder[getTaskStatus(b.status)]
+    const listTasks = [...project.tasks].sort(
+        (a, b) => STATUS_ORDER[getTaskStatus(a.status)] - STATUS_ORDER[getTaskStatus(b.status)]
     );
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
+
+            {/* ── Breadcrumb ── */}
             <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Link href="/projects" className="hover:text-foreground transition-colors">
                     Projects
                 </Link>
                 <ChevronRight size={14} />
-                <span className="text-foreground font-medium truncate max-w-[200px]">
+                <span className="text-foreground font-medium truncate max-w-[240px]">
                     {project.name}
                 </span>
             </nav>
 
-            <div className="bg-primary-foreground rounded-lg border border-border/50 overflow-hidden">
+            {/* ── Project header card ── */}
+            <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
                 <div className="h-1.5 w-full" style={{ backgroundColor: projectColor }} />
 
-                <div className="p-5 space-y-4">
+                <div className="p-6 space-y-5">
+
+                    {/* Title row */}
                     <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-4 min-w-0">
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                                className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl shrink-0"
                                 style={{
                                     backgroundColor: `${projectColor}1a`,
                                     border: `1px solid ${projectColor}33`,
@@ -216,114 +188,112 @@ export default function ProjectDetailPage({
                             >
                                 {projectIcon}
                             </div>
-
                             <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <h1 className="text-lg font-semibold text-foreground">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                    <h1 className="text-xl font-semibold text-foreground">
                                         {project.name}
                                     </h1>
-                                    <Badge
-                                        variant="outline"
-                                        className={`text-[11px] ${status.className}`}
-                                    >
-                                        {status.label}
+                                    <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>
+                                        {statusCfg.label}
                                     </Badge>
                                 </div>
-
                                 {project.description && (
-                                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                         {project.description}
                                     </p>
                                 )}
                             </div>
                         </div>
-
-                        <Button variant="outline" size="sm" className="gap-1.5 shrink-0" asChild>
+                        <Button variant="outline" size="sm" className="gap-1.5 h-9 shrink-0" asChild>
                             <Link href={`/projects/${id}/settings`}>
-                                <Settings size={13} />
+                                <Settings size={14} />
                                 Settings
                             </Link>
                         </Button>
                     </div>
 
+                    {/* Stat mini-cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-background rounded-lg p-3 border border-border/50">
-                            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                                <CheckSquare size={13} />
-                                <span className="text-xs">Tasks</span>
+                        {[
+                            {
+                                icon: <CheckSquare size={15} className="text-muted-foreground" />,
+                                label: "Total tasks",
+                                value: totalTasks,
+                                valueClass: "text-foreground",
+                            },
+                            {
+                                icon: <Clock size={15} className="text-amber-400" />,
+                                label: "In progress",
+                                value: inProgressTasks,
+                                valueClass: "text-amber-400",
+                            },
+                            {
+                                icon: <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />,
+                                label: "Completed",
+                                value: completedTasks,
+                                valueClass: "text-emerald-400",
+                            },
+                            {
+                                icon: <Users size={15} className="text-muted-foreground" />,
+                                label: "Members",
+                                value: project.members.length,
+                                valueClass: "text-foreground",
+                            },
+                        ].map(({ icon, label, value, valueClass }) => (
+                            <div
+                                key={label}
+                                className="bg-background rounded-xl p-4 border border-border/50 space-y-1.5"
+                            >
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                    {icon}
+                                    <span className="text-xs">{label}</span>
+                                </div>
+                                <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
                             </div>
-                            <p className="text-xl font-bold text-foreground">{totalTasks}</p>
-                        </div>
-
-                        <div className="bg-background rounded-lg p-3 border border-border/50">
-                            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                                <span className="text-xs">In progress</span>
-                            </div>
-                            <p className="text-xl font-bold text-foreground">
-                                {inProgressTasks}
-                            </p>
-                        </div>
-
-                        <div className="bg-background rounded-lg p-3 border border-border/50">
-                            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                <span className="text-xs">Completed</span>
-                            </div>
-                            <p className="text-xl font-bold text-emerald-400">
-                                {completedTasks}
-                            </p>
-                        </div>
-
-                        <div className="bg-background rounded-lg p-3 border border-border/50">
-                            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                                <Users size={13} />
-                                <span className="text-xs">Members</span>
-                            </div>
-                            <p className="text-xl font-bold text-foreground">
-                                {project.members.length}
-                            </p>
-                        </div>
+                        ))}
                     </div>
 
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <div className="flex-1 min-w-[160px] space-y-1.5">
+                    {/* Progress + overdue + members */}
+                    <div className="flex items-center gap-5 flex-wrap">
+                        <div className="flex-1 min-w-[180px] space-y-2">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">
-                                    Overall progress
-                                </span>
-                                <span className="text-xs font-medium text-foreground">
-                                    {progressPct}%
-                                </span>
+                                <span className="text-sm text-muted-foreground">Overall progress</span>
+                                <span className="text-sm font-semibold text-foreground">{progressPct}%</span>
                             </div>
-                            <Progress value={progressPct} className="h-1.5" />
+                            <Progress value={progressPct} className="h-2" />
+                            <p className="text-xs text-muted-foreground">
+                                {completedTasks} of {totalTasks} tasks completed
+                            </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2">
+                        <div className="flex items-center gap-4 shrink-0">
+                            {overdueTasks > 0 && (
+                                <div className="flex items-center gap-1.5 text-red-400">
+                                    <AlertTriangle size={14} />
+                                    <span className="text-sm font-medium">{overdueTasks} overdue</span>
+                                </div>
+                            )}
+
+                            <div className="flex -space-x-2.5">
                                 {project.members.slice(0, 5).map(({ user }) => (
-                                    <Avatar
-                                        key={user.id}
-                                        className="w-7 h-7 border-2 border-primary-foreground"
-                                    >
+                                    <Avatar key={user.id} className="w-8 h-8 border-2 border-primary-foreground">
                                         <AvatarImage src={user.avatarUrl ?? undefined} />
                                         <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
                                             {getInitials(user.fullName)}
                                         </AvatarFallback>
                                     </Avatar>
                                 ))}
-
                                 {project.members.length > 5 && (
-                                    <div className="w-7 h-7 rounded-full bg-muted border-2 border-primary-foreground flex items-center justify-center">
-                                        <span className="text-[10px] text-muted-foreground">
+                                    <div className="w-8 h-8 rounded-full bg-muted border-2 border-primary-foreground flex items-center justify-center">
+                                        <span className="text-[10px] text-muted-foreground font-medium">
                                             +{project.members.length - 5}
                                         </span>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Calendar size={12} />
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Calendar size={13} />
                                 Updated{" "}
                                 {new Date(updatedAt).toLocaleDateString("en-US", {
                                     month: "short",
@@ -335,23 +305,24 @@ export default function ProjectDetailPage({
                 </div>
             </div>
 
+            {/* ── View toggle ── */}
             <div className="flex items-center justify-between">
-                <Tabs value={view} onValueChange={(value) => setView(value as "board" | "list")}>
-                    <TabsList className="h-8">
-                        <TabsTrigger value="board" className="text-xs gap-1.5 px-3">
-                            <LayoutGrid size={13} /> Board
+                <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
+                    <TabsList className="h-9">
+                        <TabsTrigger value="board" className="text-sm gap-1.5 px-4">
+                            <LayoutGrid size={14} /> Board
                         </TabsTrigger>
-                        <TabsTrigger value="list" className="text-xs gap-1.5 px-3">
-                            <List size={13} /> List
+                        <TabsTrigger value="list" className="text-sm gap-1.5 px-4">
+                            <List size={14} /> List
                         </TabsTrigger>
                     </TabsList>
                 </Tabs>
-
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                     {totalTasks} task{totalTasks !== 1 ? "s" : ""}
                 </p>
             </div>
 
+            {/* ── Board view ── */}
             {view === "board" && (
                 <KanbanBoard
                     tasks={project.tasks}
@@ -363,111 +334,111 @@ export default function ProjectDetailPage({
                 />
             )}
 
+            {/* ── List view ── */}
             {view === "list" && (
-                <div className="bg-primary-foreground rounded-lg border border-border/50 overflow-hidden">
+                <div className="bg-primary-foreground rounded-xl border border-border/50 overflow-hidden">
                     {listTasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <span className="text-3xl mb-2 opacity-40">✅</span>
-                            <p className="text-sm text-muted-foreground">No tasks yet</p>
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <span className="text-4xl mb-3 opacity-40">✅</span>
+                            <p className="text-sm font-medium text-foreground mb-1">No tasks yet</p>
+                            <p className="text-sm text-muted-foreground">
+                                Add your first task from the board view
+                            </p>
                         </div>
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-border/50 bg-muted/30">
-                                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">
-                                        Task
-                                    </th>
-                                    <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">
-                                        Status
-                                    </th>
-                                    <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">
-                                        Priority
-                                    </th>
-                                    <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden lg:table-cell">
-                                        Assignee
-                                    </th>
-                                    <th className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground hidden lg:table-cell">
-                                        Due
-                                    </th>
-                                </tr>
+                            <tr className="border-b border-border/50 bg-muted/30">
+                                <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Task</th>
+                                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Status</th>
+                                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">Priority</th>
+                                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden lg:table-cell">Assignee</th>
+                                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground hidden lg:table-cell">Due</th>
+                            </tr>
                             </thead>
+                            <tbody className="divide-y divide-border/40">
+                            {listTasks.map((task) => {
+                                const taskStatus   = getTaskStatus(task.status);
+                                const taskPriority = (task.priority ?? "medium") as TaskPriority;
+                                const priorityCfg  = PRIORITY_CONFIG[taskPriority];
+                                const isOverdue    =
+                                    task.dueDate &&
+                                    new Date(task.dueDate) < new Date() &&
+                                    taskStatus !== "done";
 
-                            <tbody className="divide-y divide-border/50">
-                                {listTasks.map((task) => {
-                                    const taskStatus = getTaskStatus(task.status);
-
-                                    return (
-                                        <tr
-                                            key={task.id}
-                                            className="hover:bg-muted/20 transition-colors"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <p className="font-medium text-foreground text-sm">
-                                                    {task.title}
+                                return (
+                                    <tr
+                                        key={task.id}
+                                        className="hover:bg-muted/20 transition-colors group"
+                                    >
+                                        {/* Title */}
+                                        <td className="px-5 py-3.5">
+                                            <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                                {task.title}
+                                            </p>
+                                            {task.description && (
+                                                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                                    {task.description}
                                                 </p>
+                                            )}
+                                        </td>
 
-                                                {task.description && (
-                                                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                                        {task.description}
-                                                    </p>
-                                                )}
-                                            </td>
+                                        {/* Status */}
+                                        <td className="px-4 py-3.5 hidden sm:table-cell">
+                                            <Badge
+                                                variant="outline"
+                                                className={`text-[11px] px-2 ${LIST_STATUS_COLOR[taskStatus]}`}
+                                            >
+                                                {LIST_STATUS_LABEL[taskStatus]}
+                                            </Badge>
+                                        </td>
 
-                                            <td className="px-3 py-3 hidden sm:table-cell">
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`text-[10px] px-1.5 ${listStatusColor[taskStatus]}`}
-                                                >
-                                                    {listStatusLabel[taskStatus]}
-                                                </Badge>
-                                            </td>
+                                        {/* Priority */}
+                                        <td className="px-4 py-3.5 hidden md:table-cell">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full ${priorityCfg.dot}`} />
+                                                <span className={`text-xs ${priorityCfg.textCls}`}>
+                                                        {priorityCfg.label}
+                                                    </span>
+                                            </div>
+                                        </td>
 
-                                            <td className="px-3 py-3 hidden md:table-cell">
-                                                <span className="text-xs text-muted-foreground capitalize">
-                                                    {task.priority ?? "medium"}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-3 py-3 hidden lg:table-cell">
-                                                {task.assignee ? (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Avatar className="w-5 h-5">
-                                                            <AvatarImage
-                                                                src={task.assignee.avatarUrl ?? undefined}
-                                                            />
-                                                            <AvatarFallback className="text-[8px] bg-primary/20 text-primary">
-                                                                {getInitials(task.assignee.fullName)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="text-xs text-muted-foreground">
+                                        {/* Assignee */}
+                                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                                            {task.assignee ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="w-6 h-6">
+                                                        <AvatarImage src={task.assignee.avatarUrl ?? undefined} />
+                                                        <AvatarFallback className="text-[9px] bg-primary/20 text-primary">
+                                                            {getInitials(task.assignee.fullName)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-sm text-muted-foreground">
                                                             {task.assignee.fullName ?? "Unnamed"}
                                                         </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                )}
-                                            </td>
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">—</span>
+                                            )}
+                                        </td>
 
-                                            <td className="px-3 py-3 hidden lg:table-cell">
-                                                {task.dueDate ? (
-                                                    <span
-                                                        className={`text-xs ${new Date(task.dueDate) < new Date()
-                                                                ? "text-red-400"
-                                                                : "text-muted-foreground"
-                                                            }`}
-                                                    >
-                                                        {new Date(task.dueDate).toLocaleDateString("en-US", {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                        })}
+                                        {/* Due */}
+                                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                                            {task.dueDate ? (
+                                                <span className={`text-sm flex items-center gap-1 ${isOverdue ? "text-red-400" : "text-muted-foreground"}`}>
+                                                        {isOverdue && <AlertTriangle size={11} />}
+                                                    {new Date(task.dueDate).toLocaleDateString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                    })}
                                                     </span>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             </tbody>
                         </table>
                     )}
