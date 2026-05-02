@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { DashboardStats, OverdueTask, ActivityItem, TopProject } from "../types/dashboard";
+import { DashboardStats, OverdueTask, ActivityItem, TopProject } from "../../../types/dashboard";
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
     const now = new Date();
