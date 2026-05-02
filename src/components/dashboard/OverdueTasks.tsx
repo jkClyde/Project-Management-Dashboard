@@ -1,6 +1,6 @@
 import { AlertTriangle, ArrowUpRight, Clock, User } from "lucide-react";
 import Link from "next/link";
-import { OverdueTask, TaskPriority } from "../../types/dashboard";
+import { OverdueTask, TaskPriority } from "../../../types/dashboard";
 
 interface OverdueTasksProps {
     tasks: OverdueTask[];
