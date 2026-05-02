@@ -1,261 +1,349 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Calendar,
-    Flag,
-    User,
-    AlignLeft,
-    Send,
-    Trash2,
-    Pencil,
     X,
+    ChevronDown,
     Check,
     MessageSquare,
-    Clock,
+    Send,
+    Trash2,
+    AlertTriangle,
 } from "lucide-react";
+import { TaskDetail, TaskStatus, TaskPriority } from "../../types/task";
 
-import {
-    TaskDetail,
-    TaskStatus,
-    TaskPriority,
-    TaskMember,
-} from "../../types/task";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// ─── Config ─────────────────────────────────
-
-const STATUS_OPTIONS: { value: TaskStatus; label: string; cls: string }[] = [
-    { value: "todo", label: "To Do", cls: "bg-slate-500/10 text-slate-400 border-slate-500/20" },
-    { value: "in_progress", label: "In Progress", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-    { value: "done", label: "Done", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-];
-
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string; textCls: string; dot: string }[] = [
-    { value: "low", label: "Low", textCls: "text-sky-400", dot: "bg-sky-400" },
-    { value: "medium", label: "Medium", textCls: "text-yellow-400", dot: "bg-yellow-400" },
-    { value: "high", label: "High", textCls: "text-orange-400", dot: "bg-orange-400" },
-    { value: "urgent", label: "Urgent", textCls: "text-red-400", dot: "bg-red-400" },
-];
-
-// ─── Helpers ─────────────────────────────────
-
-function getInitials(name?: string | null) {
-    if (!name) return "?";
-    return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
-}
-
-function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
-}
-
-function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-    });
-}
-
-// ─── Props ─────────────────────────────────
-
-interface TaskDetailModalProps {
+interface Props {
     task: TaskDetail | null;
     open: boolean;
     onClose: () => void;
-    members?: TaskMember[];
-    onUpdate: (taskId: string, updates: Partial<Omit<TaskDetail, "comments">>) => Promise<void>;
-    onDelete: (taskId: string) => Promise<void>;
-    onAddComment: (taskId: string, body: string) => Promise<void>;
-    onDeleteComment: (taskId: string, commentId: string) => Promise<void>;
+    onUpdate: (id: string, updates: Partial<TaskDetail>) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+    onAddComment: (id: string, body: string) => Promise<void>;
+    onDeleteComment: (id: string, commentId: string) => Promise<void>;
 }
 
-// ─── Component ──────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+    { value: "todo",        label: "To Do" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "done",        label: "Done" },
+];
+
+// Priority colors are intentionally semantic/fixed — they communicate urgency
+// universally and aren't part of the site's theme palette.
+const PRIORITY_META: Record<TaskPriority, { label: string; textCls: string; bgCls: string; borderCls: string }> = {
+    low:    { label: "LOW",    textCls: "text-sky-500",    bgCls: "bg-sky-500/10",    borderCls: "border-sky-500/30" },
+    medium: { label: "MEDIUM", textCls: "text-yellow-500", bgCls: "bg-yellow-500/10", borderCls: "border-yellow-500/30" },
+    high:   { label: "HIGH",   textCls: "text-orange-500", bgCls: "bg-orange-500/10", borderCls: "border-orange-500/30" },
+    urgent: { label: "URGENT", textCls: "text-red-500",    bgCls: "bg-red-500/10",    borderCls: "border-red-500/30" },
+};
+
+function getInitials(name?: string | null) {
+    if (!name) return "?";
+    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function formatDate(iso?: string | null) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TaskDetailModal({
     task,
     open,
     onClose,
-    members = [],
     onUpdate,
     onDelete,
     onAddComment,
     onDeleteComment,
-}: TaskDetailModalProps) {
-    const [, startTransition] = useTransition();
+}: Props) {
+    const [commentInput, setCommentInput] = useState("");
+    const [submitting, setSubmitting]     = useState(false);
+    const [statusOpen, setStatusOpen]     = useState(false);
+    const statusRef = useRef<HTMLDivElement>(null);
 
-    const [editingTitle, setEditingTitle] = useState(false);
-    const [titleDraft, setTitleDraft] = useState("");
-    const [editingDesc, setEditingDesc] = useState(false);
-    const [descDraft, setDescDraft] = useState("");
-    const [commentBody, setCommentBody] = useState("");
-    const [submittingComment, setSubmittingComment] = useState(false);
-
-    if (!task) return null;
-
-    // ✅ FIX: lock non-null value
-    const currentTask = task;
-
-    const isOverdue =
-        currentTask.dueDate &&
-        new Date(currentTask.dueDate) < new Date() &&
-        currentTask.status !== "done";
-
-    // ── Handlers ──────────────────────────────
-
-    function update<K extends keyof Omit<TaskDetail, "comments">>(
-        key: K,
-        value: TaskDetail[K]
-    ) {
-        startTransition(() => {
-            onUpdate(currentTask.id, { [key]: value });
-        });
-    }
-
-    function saveTitleEdit() {
-        if (titleDraft.trim() && titleDraft.trim() !== currentTask.title) {
-            update("title", titleDraft.trim());
+    useEffect(() => {
+        function handler(e: MouseEvent) {
+            if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
+                setStatusOpen(false);
+            }
         }
-        setEditingTitle(false);
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    if (!open || !task) return null;
+
+    const pm = PRIORITY_META[task.priority];
+    const isOverdue = (d?: string | null) =>
+        !!d && new Date(d) < new Date() && task.status !== "done";
+
+    async function handleStatusChange(status: TaskStatus) {
+        setStatusOpen(false);
+        await onUpdate(task!.id, { status });
     }
 
-    function saveDescEdit() {
-        if (descDraft !== (currentTask.description ?? "")) {
-            update("description", descDraft || null);
+    async function handleCommentSubmit() {
+        if (!commentInput.trim()) return;
+        setSubmitting(true);
+        try {
+            await onAddComment(task!.id, commentInput.trim());
+            setCommentInput("");
+        } finally {
+            setSubmitting(false);
         }
-        setEditingDesc(false);
     }
-
-    async function submitComment() {
-        if (!commentBody.trim()) return;
-        setSubmittingComment(true);
-        await onAddComment(currentTask.id, commentBody.trim());
-        setCommentBody("");
-        setSubmittingComment(false);
-    }
-
-    function handleDelete() {
-        if (!confirm("Delete this task? This cannot be undone.")) return;
-        startTransition(async () => {
-            await onDelete(currentTask.id);
-            onClose();
-        });
-    }
-
-    // ── Render ────────────────────────────────
 
     return (
-        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        /* ── Backdrop ── */
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            {/* ── Modal shell ── */}
+            <div
+                className="relative w-full max-w-5xl mx-4 rounded-xl overflow-hidden flex flex-col bg-card border border-border shadow-2xl"
+                style={{ maxHeight: "90vh" }}
+            >
+                {/* ── Top bar ── */}
+                <div className="flex items-center gap-3 px-5 py-3 border-b border-border shrink-0">
 
-                <div className="h-1 w-full" style={{ backgroundColor: currentTask.projectColor }} />
+                    {/* Priority badge */}
+                    <span className={`text-xs font-semibold px-3 py-1 rounded border tracking-wide ${pm.textCls} ${pm.bgCls} ${pm.borderCls}`}>
+                         {pm.label}
+                    </span>
 
-                <DialogHeader className="px-6 pt-5 pb-0">
+                    {/* Status dropdown */}
+                    <div className="relative" ref={statusRef}>
+                        <button
+                            onClick={() => setStatusOpen((v) => !v)}
+                            className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium bg-muted hover:bg-accent text-foreground border border-border transition-colors"
+                        >
+                            {STATUS_OPTIONS.find((s) => s.value === task.status)?.label ?? "—"}
+                            <ChevronDown size={14} className="text-muted-foreground" />
+                        </button>
 
-                    {/* TITLE */}
-                    {editingTitle ? (
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={titleDraft}
-                                onChange={(e) => setTitleDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") saveTitleEdit();
-                                    if (e.key === "Escape") setEditingTitle(false);
-                                }}
-                                autoFocus
-                            />
-                            <Button size="icon" variant="ghost" onClick={saveTitleEdit}>
-                                <Check size={13} />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => setEditingTitle(false)}>
-                                <X size={13} />
-                            </Button>
-                        </div>
-                    ) : (
-                        <div onClick={() => {
-                            setTitleDraft(currentTask.title);
-                            setEditingTitle(true);
-                        }}>
-                            <DialogTitle>{currentTask.title}</DialogTitle>
-                        </div>
+                        {statusOpen && (
+                            <div className="absolute top-full left-0 mt-1 z-10 rounded-lg overflow-hidden w-44 bg-popover border border-border shadow-lg">
+                                {STATUS_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => handleStatusChange(opt.value)}
+                                        className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-accent ${
+                                            task.status === opt.value
+                                                ? "text-primary font-medium"
+                                                : "text-muted-foreground"
+                                        }`}
+                                    >
+                                        {opt.label}
+                                        {task.status === opt.value && <Check size={13} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mark done shortcut */}
+                    {task.status !== "done" && (
+                        <button
+                            onClick={() => onUpdate(task.id, { status: "done" })}
+                            title="Mark as done"
+                            className="flex items-center justify-center w-8 h-8 rounded text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                        >
+                            <Check size={16} />
+                        </button>
                     )}
 
-                    <div className="flex justify-between mt-2 pb-4 border-b">
-                        <span>{currentTask.projectName}</span>
-                        <Button variant="ghost" onClick={handleDelete}>
-                            <Trash2 size={12} /> Delete
-                        </Button>
-                    </div>
-                </DialogHeader>
+                    <div className="flex-1" />
 
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-                    {/* STATUS */}
-                    <Select
-                        value={currentTask.status}
-                        onValueChange={(v) => update("status", v as TaskStatus)}
+                    {/* Delete */}
+                    <button
+                        onClick={() => onDelete(task.id)}
+                        title="Delete task"
+                        className="flex items-center justify-center w-8 h-8 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {STATUS_OPTIONS.map((s) => (
-                                <SelectItem key={s.value} value={s.value}>
-                                    {s.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        <Trash2 size={15} />
+                    </button>
 
-                    {/* DESCRIPTION */}
-                    <Textarea
-                        value={editingDesc ? descDraft : currentTask.description ?? ""}
-                        onChange={(e) => setDescDraft(e.target.value)}
-                    />
-
-                    {/* COMMENTS */}
-                    {(currentTask.comments ?? []).map((c) => (
-                        <div key={c.id}>{c.body}</div>
-                    ))}
-
-                    <Textarea
-                        placeholder="Write a comment…"
-                        value={commentBody}
-                        onChange={(e) => setCommentBody(e.target.value)}
-                    />
-
-                    <Button
-                        onClick={submitComment}
-                        disabled={!commentBody.trim() || submittingComment}
+                    {/* Close */}
+                    <button
+                        onClick={onClose}
+                        className="flex items-center justify-center w-8 h-8 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
-                        <Send size={12} /> Comment
-                    </Button>
-
+                        <X size={16} />
+                    </button>
                 </div>
-            </DialogContent>
-        </Dialog>
+
+                {/* ── Body: two-column ── */}
+                <div className="flex flex-1 overflow-hidden min-h-0">
+
+                    {/* ── Left: task details ── */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-5 border-r border-border">
+
+                        {/* Task Name */}
+                        <Field label="Task Name">
+                            <p className="text-sm font-medium text-foreground">{task.title}</p>
+                        </Field>
+
+                        {/* Project */}
+                        <Field label="Project">
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className="w-2.5 h-2.5 rounded-sm shrink-0"
+                                    style={{ backgroundColor: task.projectColor }}
+                                />
+                                <p className="text-sm text-foreground">{task.projectName}</p>
+                            </div>
+                        </Field>
+
+                        {/* Description */}
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-2">
+                                Description
+                            </label>
+                            <div className="rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap min-h-[120px] bg-muted/40 border border-border text-foreground">
+                                {task.description || (
+                                    <span className="text-muted-foreground italic">
+                                        No description provided.
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Dates row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Created">
+                                <p className="text-sm text-foreground">{formatDate(task.createdAt)}</p>
+                            </Field>
+                            <Field label="Due Date">
+                                {task.dueDate ? (
+                                    <p className={`text-sm flex items-center gap-1 ${
+                                        isOverdue(task.dueDate) ? "text-destructive" : "text-foreground"
+                                    }`}>
+                                        {isOverdue(task.dueDate) && <AlertTriangle size={12} />}
+                                        {formatDate(task.dueDate)}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">—</p>
+                                )}
+                            </Field>
+                        </div>
+
+                        {/* Assignee */}
+                        <Field label="Assignee">
+                            {task.assignee ? (
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    {task.assignee.avatarUrl ? (
+                                        <img
+                                            src={task.assignee.avatarUrl}
+                                            alt={task.assignee.fullName ?? ""}
+                                            className="w-6 h-6 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                                            {getInitials(task.assignee.fullName)}
+                                        </div>
+                                    )}
+                                    <span className="text-sm text-foreground">
+                                        {task.assignee.fullName ?? task.assignee.email ?? "—"}
+                                    </span>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Unassigned</p>
+                            )}
+                        </Field>
+                    </div>
+
+                    {/* ── Right: comments ── */}
+                    <div className="w-80 shrink-0 flex flex-col min-h-0" style={{ minWidth: 280 }}>
+
+                        {/* Comment list */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            {(!task.comments || task.comments.length === 0) ? (
+                                <div className="flex flex-col items-center justify-center h-full py-12 text-center rounded-xl bg-muted/30 border border-border">
+                                    <MessageSquare size={20} className="text-muted-foreground mb-2" />
+                                    <p className="text-sm text-muted-foreground">No comments found.</p>
+                                </div>
+                            ) : (
+                                task.comments.map((c) => (
+                                    <div
+                                        key={c.id}
+                                        className="group relative rounded-xl p-3 text-sm bg-muted/40 border border-border"
+                                    >
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            {c.author.avatarUrl ? (
+                                                <img
+                                                    src={c.author.avatarUrl}
+                                                    alt={c.author.fullName ?? ""}
+                                                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                                                    {getInitials(c.author.fullName)}
+                                                </div>
+                                            )}
+                                            <span className="text-xs text-muted-foreground">
+                                                {c.author.fullName ?? c.author.email ?? "Unknown"}
+                                            </span>
+                                            <span className="ml-auto text-xs text-muted-foreground/60">
+                                                {formatDate(c.createdAt)}
+                                            </span>
+                                        </div>
+                                        <p className="text-foreground leading-relaxed">{c.body}</p>
+
+                                        <button
+                                            onClick={() => onDeleteComment(task.id, c.id)}
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Comment input */}
+                        <div className="p-3 border-t border-border shrink-0">
+                            <div className="relative">
+                                <textarea
+                                    rows={3}
+                                    placeholder="Type your comment..."
+                                    value={commentInput}
+                                    onChange={(e) => setCommentInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleCommentSubmit();
+                                    }}
+                                    className="w-full resize-none rounded-lg px-4 py-3 pr-12 text-sm bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-colors"
+                                />
+                                <button
+                                    onClick={handleCommentSubmit}
+                                    disabled={!commentInput.trim() || submitting}
+                                    className="absolute bottom-3 right-3 flex items-center justify-center w-7 h-7 rounded-lg bg-primary text-primary-foreground transition-all disabled:opacity-30 hover:opacity-90"
+                                >
+                                    <Send size={13} />
+                                </button>
+                            </div>
+                            <p className="text-xs mt-1.5 text-muted-foreground/50">⌘ + Enter to send</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div>
+            <label className="block text-xs text-muted-foreground mb-1">{label}</label>
+            <div>{children}</div>
+        </div>
     );
 }
