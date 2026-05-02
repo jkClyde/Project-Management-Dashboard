@@ -56,7 +56,7 @@ export default function KanbanBoard({
     const tasksByStatus = (status: TaskStatus) =>
         tasks
             .filter((t) => t.status === status)
-            .sort((a, b) => a.position - b.position);
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
     // ── Drag handlers ─────────────────────────────────────────────────────────
     const handleDragStart = (e: React.DragEvent, taskId: string) => {
