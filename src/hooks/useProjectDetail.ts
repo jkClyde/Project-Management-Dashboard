@@ -8,32 +8,71 @@ import {
     moveTask as moveTaskAction,
     deleteTask as deleteTaskAction,
 } from "@/lib/actions/task";
-import { TaskStatus, TaskPriority } from "@prisma/client";
 
-export type TaskDetail = {
+import { TaskStatus, TaskPriority } from "@prisma/client";
+import type { TaskDetail } from "../../types/task";
+
+/**
+ * ─────────────────────────────────────────────
+ * API TYPES (LOCAL ONLY — NEVER EXPOSED TO UI)
+ * ─────────────────────────────────────────────
+ */
+type ApiTask = {
     id: string;
     projectId: string;
     title: string;
     description?: string | null;
     status: string | null;
     priority: string | null;
-    assigneeId: string | null;
-    dueDate: Date | null;
-    position: number | null;
-    createdAt: Date | null;
-    updatedAt: Date | null;
-    assignee: {
+    assigneeId?: string | null;
+    dueDate?: Date | string | null;
+    position?: number | null;
+    createdAt?: Date | string | null;
+    updatedAt?: Date | string | null;
+
+    assignee?: {
         id: string;
         fullName: string | null;
         avatarUrl: string | null;
+        email?: string | null;
     } | null;
-    taskLabels: {
+
+    taskLabels?: {
         label: {
             id: string;
             name: string;
             color: string | null;
         };
     }[];
+
+    comments?: {
+        id: string;
+        body: string;
+        createdAt: string;
+        author: {
+            id: string;
+            fullName?: string | null;
+            avatarUrl?: string | null;
+            email?: string | null;
+        };
+    }[];
+};
+
+type ApiProject = {
+    id: string;
+    name: string;
+    description: string | null;
+    color: string | null;
+    icon: string | null;
+    status: string | null;
+    ownerId: string;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+
+    owner: any;
+    members: any[];
+    labels: any[];
+    tasks: ApiTask[];
 };
 
 export type ProjectDetail = {
@@ -46,48 +85,90 @@ export type ProjectDetail = {
     ownerId: string;
     createdAt: Date | null;
     updatedAt: Date | null;
-    owner: {
-        id: string;
-        fullName: string | null;
-        avatarUrl: string | null;
-        email: string | null;
-    } | null;
-    members: {
-        id: string;
-        projectId: string;
-        userId: string;
-        role: string;
-        joinedAt: Date;
-        user: {
-            id: string;
-            fullName: string | null;
-            avatarUrl: string | null;
-            email: string | null;
-        };
-    }[];
+
+    owner: any;
+    members: any[];
+    labels: any[];
     tasks: TaskDetail[];
-    labels: {
-        id: string;
-        name: string;
-        color: string | null;
-    }[];
 };
 
+/**
+ * ─────────────────────────────────────────────
+ * MAPPER: API → UI TASK
+ * ─────────────────────────────────────────────
+ */
+function mapTask(task: ApiTask, projectName: string, projectColor: string): TaskDetail {
+    return {
+        id: task.id,
+        projectId: task.projectId,
+        title: task.title,
+        description: task.description ?? null,
+
+        status: (task.status ?? "todo") as TaskStatus,
+        priority: (task.priority ?? "medium") as TaskPriority,
+
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+        createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : new Date().toISOString(),
+
+        assignee: task.assignee
+            ? {
+                id: task.assignee.id,
+                fullName: task.assignee.fullName,
+                avatarUrl: task.assignee.avatarUrl,
+                email: task.assignee.email ?? null,
+            }
+            : null,
+
+        assigneeId: task.assigneeId ?? null,
+
+        projectName,
+        projectColor,
+
+        position: task.position ?? 0,
+
+        taskLabels: task.taskLabels ?? [],
+        comments:
+            task.comments?.map((c) => ({
+                id: c.id,
+                body: c.body,
+                createdAt: c.createdAt,
+                author: {
+                    id: c.author.id,
+                    fullName: c.author.fullName ?? null,
+                    avatarUrl: c.author.avatarUrl ?? null,
+                    email: c.author.email ?? null,
+                },
+            })) ?? [],
+    };
+}
+
+/**
+ * ─────────────────────────────────────────────
+ * MAIN HOOK
+ * ─────────────────────────────────────────────
+ */
 export function useProjectDetail(projectId: string) {
-    const [project, setProject] = useState<ProjectDetail | null>(null);
+    const [project, setProject] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [, startTransition] = useTransition();
 
-    // ── Initial fetch only — mutations never re-fetch ─────────────────────────
     const fetchProject = useCallback(async () => {
         setLoading(true);
         setError(null);
+
         try {
-            const data = await getProjectDetail(projectId);
-            setProject(data as ProjectDetail);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Failed to load project");
+            const data = (await getProjectDetail(projectId)) as ApiProject;
+
+            setProject({
+                ...data,
+                tasks: data.tasks.map((t) =>
+                    mapTask(t, data.name, data.color ?? "#ccc")
+                ),
+            });
+        } catch (err: any) {
+            setError(err?.message ?? "Failed to load project");
         } finally {
             setLoading(false);
         }
@@ -97,7 +178,7 @@ export function useProjectDetail(projectId: string) {
         fetchProject();
     }, [fetchProject]);
 
-    // ── createTask — optimistic: append a temp task, replace with real on success ──
+    // ───────────────────────── CREATE ─────────────────────────
     const createTask = (input: {
         title: string;
         description?: string;
@@ -106,13 +187,9 @@ export function useProjectDetail(projectId: string) {
         assigneeId?: string;
         dueDate?: Date;
     }) => {
-        // Build a temporary task so the card appears instantly
         const tempId = `temp-${Date.now()}`;
-        const assigneeMember = input.assigneeId
-            ? project?.members.find((m) => m.userId === input.assigneeId)?.user ?? null
-            : null;
 
-        const optimisticTask: TaskDetail = {
+        const optimistic: TaskDetail = {
             id: tempId,
             projectId,
             title: input.title,
@@ -120,118 +197,90 @@ export function useProjectDetail(projectId: string) {
             status: input.status ?? "todo",
             priority: input.priority ?? "medium",
             assigneeId: input.assigneeId ?? null,
-            dueDate: input.dueDate ?? null,
-            position: (project?.tasks.filter((t) => t.status === (input.status ?? "todo")).length ?? 0),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            assignee: assigneeMember
-                ? { id: assigneeMember.id, fullName: assigneeMember.fullName, avatarUrl: assigneeMember.avatarUrl }
-                : null,
+            dueDate: input.dueDate ? input.dueDate.toISOString() : null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            assignee: null,
+            projectName: project?.name ?? "",
+            projectColor: project?.color ?? "#ccc",
+            position: 0,
             taskLabels: [],
+            comments: [],
         };
 
-        // Optimistically add
-        setProject((prev) =>
-            prev ? { ...prev, tasks: [...prev.tasks, optimisticTask] } : prev
+        setProject((prev: any) =>
+            prev ? { ...prev, tasks: [...prev.tasks, optimistic] } : prev
         );
 
         startTransition(async () => {
             try {
                 const created = await createTaskAction({ projectId, ...input });
-                // Replace temp task with real one from server
-                setProject((prev) => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        tasks: prev.tasks.map((t) =>
-                            t.id === tempId ? (created as TaskDetail) : t
-                        ),
-                    };
-                });
+
+                setProject((prev: any) => ({
+                    ...prev,
+                    tasks: prev.tasks.map((t: TaskDetail) =>
+                        t.id === tempId
+                            ? mapTask(created, project.name, project.color ?? "#ccc")
+                            : t
+                    ),
+                }));
             } catch {
-                // Rollback on failure
-                setProject((prev) =>
-                    prev ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== tempId) } : prev
-                );
+                setProject((prev: any) => ({
+                    ...prev,
+                    tasks: prev.tasks.filter((t: TaskDetail) => t.id !== tempId),
+                }));
             }
         });
     };
 
-    // ── updateTask — optimistic: patch fields immediately ────────────────────
-    const updateTask = (
-        taskId: string,
-        input: Parameters<typeof updateTaskAction>[1]
-    ) => {
-        // Save snapshot for rollback
-        const snapshot = project?.tasks.find((t) => t.id === taskId);
-
-        setProject((prev) => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                tasks: prev.tasks.map((t) =>
-                    t.id === taskId ? { ...t, ...input, updatedAt: new Date() } : t
-                ),
-            };
-        });
+    // ───────────────────────── UPDATE ─────────────────────────
+    const updateTask = (taskId: string, input: any) => {
+        setProject((prev: any) => ({
+            ...prev,
+            tasks: prev.tasks.map((t: TaskDetail) =>
+                t.id === taskId ? { ...t, ...input } : t
+            ),
+        }));
 
         startTransition(async () => {
             try {
                 await updateTaskAction(taskId, input);
             } catch {
-                // Rollback
-                if (snapshot) {
-                    setProject((prev) => {
-                        if (!prev) return prev;
-                        return {
-                            ...prev,
-                            tasks: prev.tasks.map((t) => (t.id === taskId ? snapshot : t)),
-                        };
-                    });
-                }
+                fetchProject();
             }
         });
     };
 
-    // ── moveTask — already optimistic, keeping as-is ─────────────────────────
-    const moveTask = (
-        taskId: string,
-        newStatus: TaskStatus,
-        newPosition: number
-    ) => {
-        setProject((prev) => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                tasks: prev.tasks.map((t) =>
-                    t.id === taskId
-                        ? { ...t, status: newStatus, position: newPosition }
-                        : t
-                ),
-            };
-        });
+    // ───────────────────────── MOVE ─────────────────────────
+    const moveTask = (taskId: string, status: TaskStatus, position: number) => {
+        setProject((prev: any) => ({
+            ...prev,
+            tasks: prev.tasks.map((t: TaskDetail) =>
+                t.id === taskId ? { ...t, status, position } : t
+            ),
+        }));
 
         startTransition(async () => {
             try {
-                await moveTaskAction(taskId, newStatus, newPosition);
+                await moveTaskAction(taskId, status, position);
             } catch {
-                // Re-fetch only on move failure (rare)
-                await fetchProject();
+                fetchProject();
             }
         });
     };
 
-    // ── deleteTask — already optimistic, keeping as-is ───────────────────────
+    // ───────────────────────── DELETE ─────────────────────────
     const deleteTask = (taskId: string) => {
-        setProject((prev) =>
-            prev ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) } : prev
-        );
+        setProject((prev: any) => ({
+            ...prev,
+            tasks: prev.tasks.filter((t: TaskDetail) => t.id !== taskId),
+        }));
 
         startTransition(async () => {
             try {
                 await deleteTaskAction(taskId);
             } catch {
-                await fetchProject();
+                fetchProject();
             }
         });
     };
