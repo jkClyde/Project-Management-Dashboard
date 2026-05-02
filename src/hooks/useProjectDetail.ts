@@ -8,7 +8,7 @@ import {
     moveTask as moveTaskAction,
     deleteTask as deleteTaskAction,
 } from "@/lib/actions/task";
-import { TaskStatus } from "@prisma/client";
+import { TaskStatus, TaskPriority } from "@prisma/client";
 
 export type TaskDetail = {
     id: string;

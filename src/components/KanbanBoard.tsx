@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import TaskCard from "@/components/TaskCard";
 import AddTaskModal from "@/components/AddTaskModal";
 import type { TaskDetail, ProjectDetail } from "@/hooks/useProjectDetail";
-import { TaskStatus } from "@prisma/client";
+import { TaskStatus, TaskPriority } from "@prisma/client";
 
 interface KanbanBoardProps {
     tasks: TaskDetail[];
