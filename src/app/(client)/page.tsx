@@ -9,7 +9,7 @@ import {
     OverallProgress,
     TopProjects,
 } from "@/components/dashboard";
-import {fetchDashboardStats} from "@/lib/actions/fetchDashboardStats";
+import { fetchDashboardStats } from "@/lib/actions/fetchDashboardStats";
 
 export default async function Homepage() {
     const stats = await fetchDashboardStats();
@@ -36,8 +36,10 @@ export default async function Homepage() {
                     label="Total Projects"
                     value={stats.totalProjects}
                     sub={`${stats.activeProjects} active · ${stats.completedProjects} completed`}
-                    accent="text-primary"
-                    iconBg="bg-primary/10"
+                    accent="text-violet-600 dark:text-violet-400"
+                    iconBg="bg-violet-500/10"
+                    iconColor="text-violet-600 dark:text-violet-400"
+                    stripeColor="#7F77DD"
                     trend={{ value: `${stats.archivedProjects} archived`, positive: false }}
                     href="/projects"
                 />
@@ -46,8 +48,10 @@ export default async function Homepage() {
                     label="Total Tasks"
                     value={totalTasks}
                     sub={`${stats.tasksByStatus.in_progress} in progress`}
-                    accent="text-sky-500"
+                    accent="text-sky-600 dark:text-sky-400"
                     iconBg="bg-sky-500/10"
+                    iconColor="text-sky-600 dark:text-sky-400"
+                    stripeColor="#378ADD"
                     trend={{ value: `${stats.tasksByStatus.todo} pending`, positive: false }}
                     href="/projects"
                 />
@@ -56,8 +60,10 @@ export default async function Homepage() {
                     label="Completed Tasks"
                     value={stats.tasksByStatus.done}
                     sub={`${totalTasks ? Math.round((stats.tasksByStatus.done / totalTasks) * 100) : 0}% completion rate`}
-                    accent="text-emerald-500"
+                    accent="text-emerald-600 dark:text-emerald-400"
                     iconBg="bg-emerald-500/10"
+                    iconColor="text-emerald-600 dark:text-emerald-400"
+                    stripeColor="#1D9E75"
                     trend={{ value: `${stats.completionRate}% this week`, positive: stats.completionRate >= 50 }}
                     href="/projects"
                 />
@@ -66,8 +72,10 @@ export default async function Homepage() {
                     label="Urgent Tasks"
                     value={stats.tasksByPriority.urgent}
                     sub={`${stats.tasksByPriority.high} high priority too`}
-                    accent="text-red-500"
+                    accent="text-red-600 dark:text-red-400"
                     iconBg="bg-red-500/10"
+                    iconColor="text-red-600 dark:text-red-400"
+                    stripeColor="#E24B4A"
                     trend={{ value: "Need attention", positive: false }}
                     href="/projects"
                 />
