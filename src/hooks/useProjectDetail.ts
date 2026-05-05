@@ -9,7 +9,7 @@ import {
     deleteTask as deleteTaskAction,
 } from "@/lib/actions/task";
 
-import { TaskStatus, TaskPriority } from "../../types/dashboard";
+import type { TaskStatus, TaskPriority } from "../../types/task";
 import type { TaskDetail } from "../../types/task";
 
 /**
@@ -208,7 +208,7 @@ export function useProjectDetail(projectId: string) {
             comments: [],
         };
 
-        setProject((prev: any) =>
+        setProject((prev) =>
             prev ? { ...prev, tasks: [...prev.tasks, optimistic] } : prev
         );
 
@@ -217,31 +217,39 @@ export function useProjectDetail(projectId: string) {
                 const created = await createTaskAction({ projectId, ...input });
 
                 setProject((prev) =>
-                    prev ? {
-                        ...prev,
-                        tasks: prev.tasks.map((t) =>
-                            t.id === tempId
-                                ? mapTask(created, prev.name, prev.color ?? "#ccc")  // ← prev, not project
-                                : t
-                        ),
-                    } : prev
+                    prev
+                        ? {
+                            ...prev,
+                            tasks: prev.tasks.map((t) =>
+                                t.id === tempId
+                                    ? mapTask(created, prev.name, prev.color ?? "#ccc")
+                                    : t
+                            ),
+                        }
+                        : prev
                 );
             } catch {
                 setProject((prev) =>
-                    prev ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== tempId) } : prev
+                    prev
+                        ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== tempId) }
+                        : prev
                 );
             }
         });
     };
 
     // ───────────────────────── UPDATE ─────────────────────────
-    const updateTask = (taskId: string, input: any) => {
-        setProject((prev: any) => ({
-            ...prev,
-            tasks: prev.tasks.map((t: TaskDetail) =>
-                t.id === taskId ? { ...t, ...input } : t
-            ),
-        }));
+    const updateTask = (taskId: string, input: Partial<TaskDetail>) => {
+        setProject((prev) =>
+            prev
+                ? {
+                    ...prev,
+                    tasks: prev.tasks.map((t) =>
+                        t.id === taskId ? { ...t, ...input } : t
+                    ),
+                }
+                : prev
+        );
 
         startTransition(async () => {
             try {
@@ -254,12 +262,16 @@ export function useProjectDetail(projectId: string) {
 
     // ───────────────────────── MOVE ─────────────────────────
     const moveTask = (taskId: string, status: TaskStatus, position: number) => {
-        setProject((prev: any) => ({
-            ...prev,
-            tasks: prev.tasks.map((t: TaskDetail) =>
-                t.id === taskId ? { ...t, status, position } : t
-            ),
-        }));
+        setProject((prev) =>
+            prev
+                ? {
+                    ...prev,
+                    tasks: prev.tasks.map((t) =>
+                        t.id === taskId ? { ...t, status, position } : t
+                    ),
+                }
+                : prev
+        );
 
         startTransition(async () => {
             try {
@@ -272,10 +284,11 @@ export function useProjectDetail(projectId: string) {
 
     // ───────────────────────── DELETE ─────────────────────────
     const deleteTask = (taskId: string) => {
-        setProject((prev: any) => ({
-            ...prev,
-            tasks: prev.tasks.filter((t: TaskDetail) => t.id !== taskId),
-        }));
+        setProject((prev) =>
+            prev
+                ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) }
+                : prev
+        );
 
         startTransition(async () => {
             try {

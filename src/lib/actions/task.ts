@@ -9,7 +9,29 @@ import { authOptions } from "@/lib/auth";
 type TaskStatus = "todo" | "in_progress" | "done";
 type TaskPriority = "low" | "medium" | "high" | "urgent";
 
-// ✅ FIXED AUTH (NextAuth instead of Supabase)
+// ── Exported row type (used by hooks for full inference) ────────────────────
+export type MyTaskRow = {
+    id: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: string | null;
+    projectId: string;
+    projectName: string;
+    projectColor: string;
+    assignee: {
+        id: string;
+        fullName: string | null;
+        avatarUrl: string | null;
+        email: string | null;
+    } | null;
+    createdAt: string;
+    updatedAt: string;
+    comments: never[];
+};
+
+// ── Auth helper ─────────────────────────────────────────────────────────────
 async function getAuthUser() {
     const session = await getServerSession(authOptions);
 
@@ -30,7 +52,7 @@ async function getAuthUser() {
     return profile;
 }
 
-// ── Get project ─────────────────────────────────────────────
+// ── Get project ─────────────────────────────────────────────────────────────
 export async function getProjectDetail(projectId: string) {
     const user = await getAuthUser();
 
@@ -65,7 +87,7 @@ export async function getProjectDetail(projectId: string) {
     });
 }
 
-// ── Create task ─────────────────────────────────────────────
+// ── Create task ─────────────────────────────────────────────────────────────
 export async function createTask(input: {
     projectId: string;
     title: string;
@@ -107,7 +129,7 @@ export async function createTask(input: {
     return task;
 }
 
-// ── Update ─────────────────────────────────────────────
+// ── Update task ─────────────────────────────────────────────────────────────
 export async function updateTask(taskId: string, input: any) {
     await getAuthUser();
 
@@ -120,7 +142,7 @@ export async function updateTask(taskId: string, input: any) {
     return task;
 }
 
-// ── Move ─────────────────────────────────────────────
+// ── Move task ───────────────────────────────────────────────────────────────
 export async function moveTask(
     taskId: string,
     newStatus: TaskStatus,
@@ -137,7 +159,7 @@ export async function moveTask(
     return task;
 }
 
-// ── Delete ─────────────────────────────────────────────
+// ── Delete task ─────────────────────────────────────────────────────────────
 export async function deleteTask(taskId: string) {
     await getAuthUser();
 
@@ -148,8 +170,8 @@ export async function deleteTask(taskId: string) {
     revalidatePath(`/projects/${task.projectId}`);
 }
 
-
-export async function getMyTasks() {
+// ── Get my tasks ────────────────────────────────────────────────────────────
+export async function getMyTasks(): Promise<MyTaskRow[]> {
     const user = await getAuthUser();
 
     const tasks = await prisma.task.findMany({
@@ -169,8 +191,8 @@ export async function getMyTasks() {
         id: t.id,
         title: t.title,
         description: t.description ?? null,
-        status: t.status,
-        priority: t.priority,
+        status: (t.status ?? "todo") as TaskStatus,
+        priority: (t.priority ?? "medium") as TaskPriority,
         dueDate: t.dueDate ? t.dueDate.toISOString() : null,
         projectId: t.projectId,
         projectName: t.project.name,
@@ -185,6 +207,6 @@ export async function getMyTasks() {
             : null,
         createdAt: t.createdAt?.toISOString() ?? new Date().toISOString(),
         updatedAt: t.updatedAt?.toISOString() ?? new Date().toISOString(),
-        comments: [], // comments are loaded separately when opening a task
+        comments: [] as never[],
     }));
 }

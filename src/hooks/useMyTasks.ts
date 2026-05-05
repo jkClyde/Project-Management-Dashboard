@@ -6,7 +6,8 @@ import {
     updateTask as updateTaskAction,
     deleteTask as deleteTaskAction,
 } from "@/lib/actions/task";
-import { TaskDetail } from "../../types/task";
+import type { MyTaskRow } from "@/lib/actions/task";
+import type { TaskDetail } from "../../types/task";
 
 interface UseMyTasksReturn {
     tasks: TaskDetail[];
@@ -16,6 +17,27 @@ interface UseMyTasksReturn {
     deleteTask: (taskId: string) => Promise<void>;
     addComment: (taskId: string, body: string) => Promise<void>;
     deleteComment: (taskId: string, commentId: string) => Promise<void>;
+}
+
+function mapRowToDetail(t: MyTaskRow): TaskDetail {
+    return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.dueDate,
+        projectId: t.projectId,
+        projectName: t.projectName,
+        projectColor: t.projectColor,
+        assignee: t.assignee ?? null,
+        assigneeId: t.assignee?.id ?? null,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        position: 0,
+        taskLabels: [],
+        comments: [],
+    };
 }
 
 export function useMyTasks(): UseMyTasksReturn {
@@ -29,22 +51,7 @@ export function useMyTasks(): UseMyTasksReturn {
         setError(null);
         try {
             const data = await getMyTasks();
-            const mapped: TaskDetail[] = data.map((t: any) => ({
-                ...t,
-                status: t.status ?? "todo",
-                priority: t.priority ?? "medium",
-                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : null,
-                createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
-                updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : new Date().toISOString(),
-                assignee: t.assignee ?? null,
-                assigneeId: t.assigneeId ?? null,
-                projectName: t.project?.name ?? "",
-                projectColor: t.project?.color ?? "#ccc",
-                position: t.position ?? 0,
-                taskLabels: t.taskLabels ?? [],   // ← this is what was missing
-                comments: t.comments ?? [],
-            }));
-            setTasks(mapped);
+            setTasks(data.map(mapRowToDetail));
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load tasks");
         } finally {
@@ -52,27 +59,29 @@ export function useMyTasks(): UseMyTasksReturn {
         }
     }, []);
 
+    useEffect(() => {
+        fetchTasks();
+    }, [fetchTasks]);
+
     // ── Update ─────────────────────────────────────────────────────────────────
     const updateTask = useCallback(
         async (taskId: string, updates: Partial<Omit<TaskDetail, "comments">>) => {
-            // Optimistic update
             setTasks((prev) =>
                 prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
             );
             try {
-                // Map TaskDetail fields back to Prisma-compatible shape
                 const prismaUpdates: Record<string, any> = {};
-                if (updates.title !== undefined) prismaUpdates.title = updates.title;
+                if (updates.title !== undefined)       prismaUpdates.title = updates.title;
                 if (updates.description !== undefined) prismaUpdates.description = updates.description;
-                if (updates.status !== undefined) prismaUpdates.status = updates.status;
-                if (updates.priority !== undefined) prismaUpdates.priority = updates.priority;
-                if (updates.dueDate !== undefined) prismaUpdates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
-                if (updates.assignee !== undefined) prismaUpdates.assigneeId = updates.assignee?.id ?? null;
+                if (updates.status !== undefined)      prismaUpdates.status = updates.status;
+                if (updates.priority !== undefined)    prismaUpdates.priority = updates.priority;
+                if (updates.dueDate !== undefined)     prismaUpdates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+                if (updates.assignee !== undefined)    prismaUpdates.assigneeId = updates.assignee?.id ?? null;
 
                 await updateTaskAction(taskId, prismaUpdates);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Update failed");
-                fetchTasks(); // roll back
+                fetchTasks();
             }
         },
         [fetchTasks]
@@ -86,17 +95,15 @@ export function useMyTasks(): UseMyTasksReturn {
                 await deleteTaskAction(taskId);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Delete failed");
-                fetchTasks(); // roll back
+                fetchTasks();
             }
         },
         [fetchTasks]
     );
 
     // ── Add comment ───────────────────────────────────────────────────────────
-    // Comments are not managed via server actions yet — stub kept for modal compatibility
     const addComment = useCallback(async (_taskId: string, _body: string) => {
         // TODO: add a createComment server action to src/lib/actions/task.ts
-        // Then call it here and append the result to the matching task's comments array
         console.warn("addComment: no server action implemented yet");
     }, []);
 

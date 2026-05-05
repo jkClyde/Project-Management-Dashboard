@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyTasks } from "@/lib/actions/task";
 import { getProjects } from "@/lib/actions/prisma";
+import type { MyTaskRow } from "@/lib/actions/task";
+import type { ProjectRow } from "@/lib/actions/prisma";
 import { CalendarTask, CalendarProject } from "../../types/Calendar";
 
 interface UseCalendarReturn {
@@ -23,22 +25,22 @@ export function useCalendar(): UseCalendarReturn {
         setLoading(true);
         setError(null);
         try {
-            const [tasksData, projectsData] = await Promise.all([
+            const [tasksData, projectsData]: [MyTaskRow[], ProjectRow[]] = await Promise.all([
                 getMyTasks(),
                 getProjects("all"),
             ]);
 
-            const calTasks: CalendarTask[] = (tasksData as any[])
+            const calTasks: CalendarTask[] = tasksData
                 .filter((t) => !!t.dueDate)
                 .map((t) => ({
                     id: t.id,
                     title: t.title,
-                    status: t.status ?? "todo",
-                    priority: t.priority ?? "medium",
-                    dueDate: new Date(t.dueDate).toISOString().split("T")[0],
+                    status: t.status,
+                    priority: t.priority,
+                    dueDate: new Date(t.dueDate!).toISOString().split("T")[0],
                     projectId: t.projectId,
-                    projectName: t.project?.name ?? t.projectName ?? "",
-                    projectColor: t.project?.color ?? t.projectColor ?? "#ccc",
+                    projectName: t.projectName,
+                    projectColor: t.projectColor,
                     assigneeId: t.assignee?.id ?? null,
                     assigneeName: t.assignee?.fullName ?? null,
                     assigneeAvatar: t.assignee?.avatarUrl ?? null,

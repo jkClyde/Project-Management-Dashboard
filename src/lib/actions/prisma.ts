@@ -8,6 +8,25 @@ import { prisma } from "@/lib/prisma";
 
 type ProjectStatus = "active" | "archived" | "completed";
 
+// ── Exported row type (used by hooks for full inference) ────────────────────
+export type ProjectRow = {
+    id: string;
+    name: string;
+    description: string;
+    color: string;
+    icon: string;
+    status: ProjectStatus;
+    ownerId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    ownerName: string;
+    ownerAvatar: string;
+    memberCount: number;
+    taskCount: number;
+    tasksCompleted: number;
+};
+
+// ── Auth helper ─────────────────────────────────────────────────────────────
 async function getAuthProfile() {
     const session = await getServerSession(authOptions);
 
@@ -39,7 +58,8 @@ export async function syncProfile() {
     return getAuthProfile();
 }
 
-export async function getProjects(status?: ProjectStatus | "all") {
+// ── Get projects ────────────────────────────────────────────────────────────
+export async function getProjects(status?: ProjectStatus | "all"): Promise<ProjectRow[]> {
     const profile = await getAuthProfile();
 
     const memberships = await prisma.projectMember.findMany({
@@ -59,21 +79,11 @@ export async function getProjects(status?: ProjectStatus | "all") {
             AND: [
                 {
                     OR: [
-                        {
-                            ownerId: profile.id,
-                        },
-                        {
-                            id: {
-                                in: memberProjectIds,
-                            },
-                        },
+                        { ownerId: profile.id },
+                        { id: { in: memberProjectIds } },
                     ],
                 },
-                status && status !== "all"
-                    ? {
-                        status,
-                    }
-                    : {},
+                status && status !== "all" ? { status } : {},
             ],
         },
         orderBy: {
@@ -85,53 +95,24 @@ export async function getProjects(status?: ProjectStatus | "all") {
     const ownerIds = [...new Set(projects.map((project) => project.ownerId))];
 
     const owners = await prisma.profile.findMany({
-        where: {
-            id: {
-                in: ownerIds,
-            },
-        },
-        select: {
-            id: true,
-            fullName: true,
-            avatarUrl: true,
-        },
+        where: { id: { in: ownerIds } },
+        select: { id: true, fullName: true, avatarUrl: true },
     });
 
     const members = await prisma.projectMember.findMany({
-        where: {
-            projectId: {
-                in: projectIds,
-            },
-        },
-        select: {
-            projectId: true,
-            userId: true,
-            role: true,
-        },
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true, userId: true, role: true },
     });
 
     const tasks = await prisma.task.findMany({
-        where: {
-            projectId: {
-                in: projectIds,
-            },
-        },
-        select: {
-            projectId: true,
-            status: true,
-        },
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true, status: true },
     });
 
     return projects.map((project) => {
         const owner = owners.find((item) => item.id === project.ownerId);
-
-        const projectMembers = members.filter(
-            (member) => member.projectId === project.id
-        );
-
-        const projectTasks = tasks.filter(
-            (task) => task.projectId === project.id
-        );
+        const projectMembers = members.filter((m) => m.projectId === project.id);
+        const projectTasks = tasks.filter((t) => t.projectId === project.id);
 
         return {
             id: project.id,
@@ -143,18 +124,16 @@ export async function getProjects(status?: ProjectStatus | "all") {
             ownerId: project.ownerId,
             createdAt: project.createdAt ?? new Date(),
             updatedAt: project.updatedAt ?? new Date(),
-
             ownerName: owner?.fullName ?? "",
             ownerAvatar: owner?.avatarUrl ?? "",
-
             memberCount: projectMembers.length,
             taskCount: projectTasks.length,
-            tasksCompleted: projectTasks.filter((task) => task.status === "done")
-                .length,
+            tasksCompleted: projectTasks.filter((t) => t.status === "done").length,
         };
     });
 }
 
+// ── Create project ──────────────────────────────────────────────────────────
 export async function createProject(input: {
     name: string;
     description?: string;
@@ -186,10 +165,10 @@ export async function createProject(input: {
     });
 
     revalidatePath("/projects");
-
     return project;
 }
 
+// ── Update project ──────────────────────────────────────────────────────────
 export async function updateProject(
     id: string,
     input: {
@@ -203,22 +182,11 @@ export async function updateProject(
     const profile = await getAuthProfile();
 
     const project = await prisma.project.findFirst({
-        where: {
-            id,
-            OR: [
-                {
-                    ownerId: profile.id,
-                },
-            ],
-        },
+        where: { id, OR: [{ ownerId: profile.id }] },
     });
 
     const adminMember = await prisma.projectMember.findFirst({
-        where: {
-            projectId: id,
-            userId: profile.id,
-            role: "admin",
-        },
+        where: { projectId: id, userId: profile.id, role: "admin" },
     });
 
     if (!project && !adminMember) {
@@ -226,14 +194,10 @@ export async function updateProject(
     }
 
     const updated = await prisma.project.update({
-        where: {
-            id,
-        },
+        where: { id },
         data: {
             ...(input.name !== undefined ? { name: input.name } : {}),
-            ...(input.description !== undefined
-                ? { description: input.description }
-                : {}),
+            ...(input.description !== undefined ? { description: input.description } : {}),
             ...(input.color !== undefined ? { color: input.color } : {}),
             ...(input.icon !== undefined ? { icon: input.icon } : {}),
             ...(input.status !== undefined ? { status: input.status } : {}),
@@ -242,47 +206,36 @@ export async function updateProject(
 
     revalidatePath("/projects");
     revalidatePath(`/projects/${id}`);
-
     return updated;
 }
 
 export async function archiveProject(id: string) {
-    return updateProject(id, {
-        status: "archived",
-    });
+    return updateProject(id, { status: "archived" });
 }
 
+// ── Delete project ──────────────────────────────────────────────────────────
 export async function deleteProject(id: string) {
     const profile = await getAuthProfile();
 
     await prisma.project.deleteMany({
-        where: {
-            id,
-            ownerId: profile.id,
-        },
+        where: { id, ownerId: profile.id },
     });
 
     revalidatePath("/projects");
 }
 
+// ── Get single project ──────────────────────────────────────────────────────
 export async function getProject(id: string) {
     const profile = await getAuthProfile();
 
-    const project = await prisma.project.findFirst({
-        where: {
-            id,
-        },
-    });
+    const project = await prisma.project.findFirst({ where: { id } });
 
     if (!project) {
         throw new Error("Project not found");
     }
 
     const membership = await prisma.projectMember.findFirst({
-        where: {
-            projectId: id,
-            userId: profile.id,
-        },
+        where: { projectId: id, userId: profile.id },
     });
 
     if (project.ownerId !== profile.id && !membership) {
@@ -290,51 +243,23 @@ export async function getProject(id: string) {
     }
 
     const owner = await prisma.profile.findUnique({
-        where: {
-            id: project.ownerId,
-        },
-        select: {
-            fullName: true,
-            avatarUrl: true,
-            email: true,
-        },
+        where: { id: project.ownerId },
+        select: { fullName: true, avatarUrl: true, email: true },
     });
 
     const members = await prisma.projectMember.findMany({
-        where: {
-            projectId: id,
-        },
-        orderBy: {
-            joinedAt: "asc",
-        },
+        where: { projectId: id },
+        orderBy: { joinedAt: "asc" },
     });
 
     const memberProfiles = await prisma.profile.findMany({
-        where: {
-            id: {
-                in: members.map((member) => member.userId),
-            },
-        },
-        select: {
-            id: true,
-            fullName: true,
-            avatarUrl: true,
-            email: true,
-        },
+        where: { id: { in: members.map((m) => m.userId) } },
+        select: { id: true, fullName: true, avatarUrl: true, email: true },
     });
 
     const tasks = await prisma.task.findMany({
-        where: {
-            projectId: id,
-        },
-        orderBy: [
-            {
-                position: "asc",
-            },
-            {
-                createdAt: "asc",
-            },
-        ],
+        where: { projectId: id },
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
     });
 
     return {
@@ -347,8 +272,7 @@ export async function getProject(id: string) {
         owner,
         members: members.map((member) => ({
             ...member,
-            user:
-                memberProfiles.find((profile) => profile.id === member.userId) ?? null,
+            user: memberProfiles.find((p) => p.id === member.userId) ?? null,
         })),
         tasks,
         labels: [],
