@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { TaskDetail } from "@/hooks/useProjectDetail";
+import { TaskDetail } from "../../types/task";
+import { TaskPriority } from "../../types/dashboard";
 
 interface TaskCardProps {
     task: TaskDetail;
@@ -20,7 +21,6 @@ interface TaskCardProps {
     isDragging?: boolean;
 }
 
-type TaskPriority = "low" | "medium" | "high" | "urgent";
 
 const priorityConfig: Record<
     TaskPriority,
