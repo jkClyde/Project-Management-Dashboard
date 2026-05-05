@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import type { TaskDetail, ProjectDetail } from "@/hooks/useProjectDetail";
-import { TaskStatus, TaskPriority } from "@prisma/client";
+import { TaskDetail } from "../../types/task";
+import { ProjectDetail } from "@/hooks/useProjectDetail";
+import { TaskStatus, TaskPriority } from "../../types/dashboard";
 
 interface AddTaskModalProps {
     open: boolean;
