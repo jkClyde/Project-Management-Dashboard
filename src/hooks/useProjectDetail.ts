@@ -9,7 +9,7 @@ import {
     deleteTask as deleteTaskAction,
 } from "@/lib/actions/task";
 
-import { TaskStatus, TaskPriority } from "@prisma/client";
+import { TaskStatus, TaskPriority } from "../../types/dashboard";
 import type { TaskDetail } from "../../types/task";
 
 /**
@@ -149,7 +149,7 @@ function mapTask(task: ApiTask, projectName: string, projectColor: string): Task
  * ─────────────────────────────────────────────
  */
 export function useProjectDetail(projectId: string) {
-    const [project, setProject] = useState<any>(null);
+    const [project, setProject] = useState<ProjectDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [, startTransition] = useTransition();
@@ -216,19 +216,20 @@ export function useProjectDetail(projectId: string) {
             try {
                 const created = await createTaskAction({ projectId, ...input });
 
-                setProject((prev: any) => ({
-                    ...prev,
-                    tasks: prev.tasks.map((t: TaskDetail) =>
-                        t.id === tempId
-                            ? mapTask(created, project.name, project.color ?? "#ccc")
-                            : t
-                    ),
-                }));
+                setProject((prev) =>
+                    prev ? {
+                        ...prev,
+                        tasks: prev.tasks.map((t) =>
+                            t.id === tempId
+                                ? mapTask(created, prev.name, prev.color ?? "#ccc")  // ← prev, not project
+                                : t
+                        ),
+                    } : prev
+                );
             } catch {
-                setProject((prev: any) => ({
-                    ...prev,
-                    tasks: prev.tasks.filter((t: TaskDetail) => t.id !== tempId),
-                }));
+                setProject((prev) =>
+                    prev ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== tempId) } : prev
+                );
             }
         });
     };
