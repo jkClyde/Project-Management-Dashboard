@@ -238,14 +238,26 @@ export function useProjectDetail(projectId: string) {
         });
     };
 
-    // ───────────────────────── UPDATE ─────────────────────────
-    const updateTask = (taskId: string, input: Partial<TaskDetail>) => {
+    // Define a separate input type that matches what KanbanBoard sends
+    type UpdateTaskInput = Partial<Omit<TaskDetail, "dueDate">> & {
+        dueDate?: Date | string | null;
+    };
+
+    const updateTask = (taskId: string, input: UpdateTaskInput) => {
+        // Normalize dueDate to string before storing in state
+        const normalized: Partial<TaskDetail> = {
+            ...input,
+            dueDate: input.dueDate
+                ? new Date(input.dueDate).toISOString()
+                : input.dueDate ?? undefined,
+        };
+
         setProject((prev) =>
             prev
                 ? {
                     ...prev,
                     tasks: prev.tasks.map((t) =>
-                        t.id === taskId ? { ...t, ...input } : t
+                        t.id === taskId ? { ...t, ...normalized } : t
                     ),
                 }
                 : prev
