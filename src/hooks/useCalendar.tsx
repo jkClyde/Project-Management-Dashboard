@@ -28,18 +28,17 @@ export function useCalendar(): UseCalendarReturn {
                 getProjects("all"),
             ]);
 
-            // Only keep tasks that have a dueDate
-            const calTasks: CalendarTask[] = tasksData
+            const calTasks: CalendarTask[] = (tasksData as any[])
                 .filter((t) => !!t.dueDate)
                 .map((t) => ({
                     id: t.id,
                     title: t.title,
-                    status: t.status,
-                    priority: t.priority,
-                    dueDate: t.dueDate!.split("T")[0],
+                    status: t.status ?? "todo",
+                    priority: t.priority ?? "medium",
+                    dueDate: new Date(t.dueDate).toISOString().split("T")[0],
                     projectId: t.projectId,
-                    projectName: t.projectName,
-                    projectColor: t.projectColor,
+                    projectName: t.project?.name ?? t.projectName ?? "",
+                    projectColor: t.project?.color ?? t.projectColor ?? "#ccc",
                     assigneeId: t.assignee?.id ?? null,
                     assigneeName: t.assignee?.fullName ?? null,
                     assigneeAvatar: t.assignee?.avatarUrl ?? null,
