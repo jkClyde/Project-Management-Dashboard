@@ -29,17 +29,28 @@ export function useMyTasks(): UseMyTasksReturn {
         setError(null);
         try {
             const data = await getMyTasks();
-            setTasks(data as TaskDetail[]);
+            const mapped: TaskDetail[] = data.map((t: any) => ({
+                ...t,
+                status: t.status ?? "todo",
+                priority: t.priority ?? "medium",
+                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : null,
+                createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+                updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : new Date().toISOString(),
+                assignee: t.assignee ?? null,
+                assigneeId: t.assigneeId ?? null,
+                projectName: t.project?.name ?? "",
+                projectColor: t.project?.color ?? "#ccc",
+                position: t.position ?? 0,
+                taskLabels: t.taskLabels ?? [],   // ← this is what was missing
+                comments: t.comments ?? [],
+            }));
+            setTasks(mapped);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load tasks");
         } finally {
             setLoading(false);
         }
     }, []);
-
-    useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
 
     // ── Update ─────────────────────────────────────────────────────────────────
     const updateTask = useCallback(
@@ -51,12 +62,12 @@ export function useMyTasks(): UseMyTasksReturn {
             try {
                 // Map TaskDetail fields back to Prisma-compatible shape
                 const prismaUpdates: Record<string, any> = {};
-                if (updates.title !== undefined)       prismaUpdates.title = updates.title;
+                if (updates.title !== undefined) prismaUpdates.title = updates.title;
                 if (updates.description !== undefined) prismaUpdates.description = updates.description;
-                if (updates.status !== undefined)      prismaUpdates.status = updates.status;
-                if (updates.priority !== undefined)    prismaUpdates.priority = updates.priority;
-                if (updates.dueDate !== undefined)     prismaUpdates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
-                if (updates.assignee !== undefined)    prismaUpdates.assigneeId = updates.assignee?.id ?? null;
+                if (updates.status !== undefined) prismaUpdates.status = updates.status;
+                if (updates.priority !== undefined) prismaUpdates.priority = updates.priority;
+                if (updates.dueDate !== undefined) prismaUpdates.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+                if (updates.assignee !== undefined) prismaUpdates.assigneeId = updates.assignee?.id ?? null;
 
                 await updateTaskAction(taskId, prismaUpdates);
             } catch (err) {
