@@ -1,7 +1,4 @@
 // hooks/useProjects.ts
-// Client hook — calls server actions, never touches DB directly.
-// If you swap the DB, only lib/actions/projects.ts changes. This file stays the same.
-
 'use client'
 
 import { useState, useEffect, useCallback, useTransition } from 'react'
@@ -12,20 +9,18 @@ import {
     archiveProject as archiveProjectAction,
     deleteProject as deleteProjectAction,
 } from '@/lib/actions/prisma'
+import type { ProjectRow } from '@/lib/actions/prisma'
 
+// REMOVED: import type { ProjectStatus } from '@prisma/client'
 
-
-import type { ProjectStatus } from '@prisma/client'
-
-
-type ProjectWithStats = Awaited<ReturnType<typeof getProjects>>[number]
+type ProjectStatus = ProjectRow['status']  // "active" | "archived" | "completed"
 
 interface UseProjectsOptions {
     status?: ProjectStatus | 'all'
 }
 
 export function useProjects({ status = 'all' }: UseProjectsOptions = {}) {
-    const [projects, setProjects] = useState<ProjectWithStats[]>([])
+    const [projects, setProjects] = useState<ProjectRow[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
